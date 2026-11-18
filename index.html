@@ -169,12 +169,20 @@
             </button>
             <span class="text-slate-700">|</span>
             <button id="btnDrawAOI" class="px-2.5 py-1 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 font-medium flex items-center gap-1 transition">
-              <i data-lucide="square-dashed-mouse-pointer" class="w-3.5 h-3.5"></i>
+              <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
               <span id="labelDrawAOI" data-i18n="btnDrawAOI">Desenhar Área</span>
             </button>
-            <button id="btnClearMap" class="px-2.5 py-1 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25 font-medium flex items-center gap-1 transition" title="Limpar camadas do mapa">
+            <button id="btnMeasureDist" class="px-2 py-1 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25 font-medium flex items-center gap-1 transition" title="Medir Distância Linear">
+              <i data-lucide="ruler" class="w-3.5 h-3.5"></i>
+              <span data-i18n="btnMeasDist">Distância</span>
+            </button>
+            <button id="btnMeasureArea" class="px-2 py-1 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30 hover:bg-purple-500/25 font-medium flex items-center gap-1 transition" title="Medir Área">
+              <i data-lucide="pentagon" class="w-3.5 h-3.5"></i>
+              <span data-i18n="btnMeasArea">Área</span>
+            </button>
+            <button id="btnClearMap" class="px-2 py-1 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25 font-medium flex items-center gap-1 transition" title="Limpar camadas do mapa">
               <i data-lucide="eraser" class="w-3.5 h-3.5"></i>
-              <span data-i18n="btnClearMap">Limpar Mapa</span>
+              <span data-i18n="btnClearMap">Limpar</span>
             </button>
             <button id="btnCenterAOI" class="px-2 py-1 rounded bg-slate-800 text-slate-300 hover:text-white border border-slate-700 flex items-center gap-1" title="Centralizar na AOI">
               <i data-lucide="locate-fixed" class="w-3.5 h-3.5"></i>
@@ -222,21 +230,63 @@
           </div>
         </div>
 
+        <!-- 30m vs 2m Visual Proof Checkboxes & Live Measurement Readout -->
+        <div class="px-3.5 py-1.5 bg-slate-900/90 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+          <div class="flex items-center gap-3">
+            <span class="text-slate-400 font-medium" data-i18n="lblCompareRes">Comparar:</span>
+            <label class="flex items-center gap-1.5 text-emerald-300 font-semibold cursor-pointer">
+              <input id="chkLayer2m" type="checkbox" checked class="rounded border-slate-600 text-emerald-500 bg-slate-900" />
+              <span data-i18n="chkShow2m">2m Super-Resolvido</span>
+            </label>
+            <label class="flex items-center gap-1.5 text-rose-300 font-semibold cursor-pointer">
+              <input id="chkLayer30m" type="checkbox" class="rounded border-slate-600 text-rose-500 bg-slate-900" />
+              <span data-i18n="chkShow30m">30m Bruto (Pixelado)</span>
+            </label>
+          </div>
+          <div id="measureReadoutBar" class="hidden mono text-amber-300 flex items-center gap-2">
+            <span id="measureText">Clique no mapa para medir</span>
+            <button id="btnFinishMeasure" class="px-2 py-0.5 rounded bg-amber-500 text-slate-950 font-bold text-[10px]">Concluir</button>
+            <button id="btnClearMeasure" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">Limpar</button>
+          </div>
+        </div>
+
         <!-- 2D Leaflet Map Container -->
         <div id="leafletMap" class="relative"></div>
 
-        <!-- 3D WebGL Terrain View Container -->
-        <div id="threeContainer" class="hidden">
-          <div class="absolute top-3 left-3 z-20 bg-slate-900/90 border border-slate-700 rounded-lg px-3 py-2 text-xs space-y-1.5 backdrop-blur">
-            <div class="font-semibold text-sky-300 flex items-center gap-1.5">
-              <i data-lucide="orbit" class="w-3.5 h-3.5"></i>
-              <span data-i18n="threeTitle">Modelo 3D Super-Resolvido (2m Suavizado)</span>
+        <!-- 3D WebGL Volumetric Landscape Container -->
+        <div id="threeContainer" class="hidden" style="background: linear-gradient(180deg, #0f172a 0%, #1e3a5f 55%, #0c4a6e 100%);">
+          <div class="absolute top-3 left-3 z-20 bg-slate-950/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs space-y-2 backdrop-blur max-w-[280px] shadow-xl">
+            <div class="font-semibold text-sky-300 flex items-center justify-between gap-2">
+              <span class="flex items-center gap-1.5"><i data-lucide="box" class="w-3.5 h-3.5"></i> <span data-i18n="threeTitle">Paisagem 3D Volumétrica (2m)</span></span>
             </div>
-            <p class="text-[11px] text-slate-400" data-i18n="threeHint">Arraste para rotacionar | Scroll para zoom</p>
-            <div class="flex items-center gap-2 pt-1">
-              <span class="text-[11px] text-slate-300" data-i18n="lblExaggeration">Exagero Vertical:</span>
-              <input id="sliderExaggeration" type="range" min="10" max="50" value="20" class="w-24 h-1.5 bg-slate-700 rounded cursor-pointer" />
-              <span id="valExaggeration" class="mono text-[11px] text-emerald-300">2.0x</span>
+            <p class="text-[10px] text-slate-400" data-i18n="threeHint">Arraste p/ rotacionar | Scroll p/ zoom</p>
+
+            <div class="space-y-1.5 pt-1 border-t border-slate-800">
+              <div>
+                <label for="select3DTexture" class="block text-[10px] text-slate-300 mb-0.5" data-i18n="lbl3DTexture">Textura da Superfície 3D:</label>
+                <select id="select3DTexture" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[11px] text-white">
+                  <option value="fusion">Fusão: Mapa Base (Img/OSM) + MDE</option>
+                  <option value="basemap">Somente Mapa Base (Esri / OSM)</option>
+                  <option value="palette">Somente Paleta Hipsométrica</option>
+                  <option value="wireframe">Malha Estrutural 2m (Wireframe)</option>
+                </select>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-[10px] mb-0.5">
+                  <span class="text-slate-300" data-i18n="lbl3DFusion">Fusão Base vs Paleta:</span>
+                  <span id="val3DFusion" class="mono text-emerald-300">55% Base</span>
+                </div>
+                <input id="slider3DFusion" type="range" min="0" max="100" value="55" class="w-full h-1.5 bg-slate-700 rounded cursor-pointer" />
+              </div>
+
+              <div>
+                <div class="flex justify-between text-[10px] mb-0.5">
+                  <span class="text-slate-300" data-i18n="lblExaggeration">Exagero Vertical:</span>
+                  <span id="valExaggeration" class="mono text-sky-300">2.0x</span>
+                </div>
+                <input id="sliderExaggeration" type="range" min="10" max="60" value="20" class="w-full h-1.5 bg-slate-700 rounded cursor-pointer" />
+              </div>
             </div>
           </div>
           <canvas id="threeCanvas" class="w-full h-full block cursor-grab"></canvas>
@@ -428,6 +478,24 @@ git push origin main</pre>
               <option value="aspect_hsv">Circular HSV (Direção)</option>
               <option value="grayscale">Escala de Cinza (Relevo)</option>
             </select>
+          </div>
+        </div>
+
+        <!-- Terrain Roughness & Exaggeration quick controls -->
+        <div class="grid grid-cols-2 gap-2 pt-0.5">
+          <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 flex flex-col justify-center">
+            <div class="flex justify-between text-[10px]">
+              <span class="text-slate-300 font-medium" data-i18n="lblRoughness">Rugosidade Terreno:</span>
+              <span id="valRoughness" class="mono text-amber-300">25% (Suave)</span>
+            </div>
+            <input id="sliderRoughness" type="range" min="0" max="100" value="25" class="w-full h-1 bg-slate-800 rounded cursor-pointer mt-1" />
+          </div>
+          <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 flex flex-col justify-center">
+            <div class="flex justify-between text-[10px]">
+              <span class="text-slate-300 font-medium" data-i18n="lblExaggeration">Exagero Vertical 3D:</span>
+              <span id="valExagStep2" class="mono text-sky-300">2.0x</span>
+            </div>
+            <input id="sliderExagStep2" type="range" min="10" max="60" value="20" class="w-full h-1 bg-slate-800 rounded cursor-pointer mt-1" />
           </div>
         </div>
 
@@ -777,9 +845,15 @@ git push origin main</pre>
           </div>
           <h3 class="text-sm font-bold text-white" data-i18n="tutModalTitle">Bem-vindo ao TSharp-DEM 2m — Guia Rápido</h3>
         </div>
-        <button id="btnCloseTutorial" class="p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white">
+        <div class="flex items-center gap-2">
+          <div class="flex items-center bg-slate-800 border border-slate-700 rounded-lg p-0.5 text-[11px]">
+            <button id="btnTutLangPT" class="px-2 py-0.5 rounded font-semibold bg-sky-500 text-slate-950 transition">PT-BR</button>
+            <button id="btnTutLangEN" class="px-2 py-0.5 rounded font-semibold text-slate-300 hover:text-white transition">EN</button>
+          </div>
+          <button id="btnCloseTutorial" class="p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white">
           <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
+          </button>
+        </div>
       </div>
       <div id="tutorialBody" class="p-5 text-xs text-slate-200 space-y-3 leading-relaxed"></div>
       <div class="px-5 py-3 bg-slate-950/80 border-t border-slate-800 flex items-center justify-between">
@@ -885,6 +959,14 @@ git push origin main</pre>
         shapePoly: 'Polígono',
         btnFinishPoly: 'Concluir Polígono',
         btnCancelDraw: 'Cancelar',
+        btnMeasDist: 'Distância',
+        btnMeasArea: 'Área',
+        lblCompareRes: 'Comparar:',
+        chkShow2m: '2m Super-Resolvido',
+        chkShow30m: '30m Bruto (Pixelado)',
+        lbl3DTexture: 'Textura da Superfície 3D:',
+        lbl3DFusion: 'Fusão Base vs Paleta:',
+        lblRoughness: 'Rugosidade Terreno:',
         methModalTitle: 'Metodologia Científica — Downscaling MDE 30m → 2m (TSharp-DEM)',
         tutModalTitle: 'Tutorial Rápido — Como Usar o TSharp-DEM 2m',
         methodologyHTML: `
@@ -1018,6 +1100,14 @@ git push origin main</pre>
         shapePoly: 'Polygon',
         btnFinishPoly: 'Finish Polygon',
         btnCancelDraw: 'Cancel',
+        btnMeasDist: 'Distance',
+        btnMeasArea: 'Area',
+        lblCompareRes: 'Compare:',
+        chkShow2m: '2m Super-Resolved',
+        chkShow30m: '30m Raw (Pixelated)',
+        lbl3DTexture: '3D Surface Texture:',
+        lbl3DFusion: 'Basemap vs Palette Blend:',
+        lblRoughness: 'Terrain Roughness:',
         methModalTitle: 'Scientific Methodology — 30m → 2m DEM Downscaling (TSharp-DEM)',
         tutModalTitle: 'Quick Tutorial — How to Use TSharp-DEM 2m',
         methodologyHTML: `
@@ -1042,13 +1132,24 @@ git push origin main</pre>
           </div>
         `,
         tutorialHTML: `
-          <ol class="list-decimal pl-5 space-y-2.5">
-            <li><strong>Define Your Area of Interest (AOI):</strong> Click <span class="text-emerald-300 font-semibold">Draw AOI</span> to click two corners directly on the map, or upload a <span class="text-sky-300 font-semibold">.kml, .geojson, or .shp</span> file in the right panel.</li>
-            <li><strong>Switch Basemaps &amp; 2D/3D View:</strong> Toggle between <em>Esri Imagery</em> and <em>OSM Basemap</em> on the map toolbar, or click <span class="text-sky-300 font-semibold">3D View: ON</span> to inspect the interactive WebGL 3D terrain mesh with vertical exaggeration.</li>
-            <li><strong>Choose Variable, Unit &amp; Color Palette:</strong> Select <strong>Elevation, Slope, Aspect, or Solar Insolation</strong>, switch units between <strong>Meters (m) / Feet (ft)</strong> and <strong>Degrees (°) / Percent (%)</strong>, and pick from 7 scientific color palettes.</li>
-            <li><strong>Trace Topographic Profile:</strong> Click <span class="text-amber-300 font-semibold">Trace Profile A-B</span> and click two points on the map to plot the cross-section comparing 30 m vs 2 m terrain. Click <em>Export Profile (PNG)</em> to save the chart.</li>
-            <li><strong>Export According to Selection:</strong> Clicking <span class="text-emerald-300 font-semibold">Download Selected Raster</span> exports the active variable and unit as <strong>GeoTIFF Float32 (.tif), ESRI ASCII Grid (.asc), XYZ (.xyz), or ENVI (.bil)</strong>, while <em>Export Screen + Legend PNG</em> captures the map/3D view with colorbar and metadata.</li>
-          </ol>
+          <div class="space-y-2.5">
+            <div class="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-800/70 border border-slate-700/80">
+              <span class="w-5 h-5 rounded-full bg-sky-500 text-slate-950 font-bold flex items-center justify-center shrink-0">1</span>
+              <div><strong>Select Area (Step 1):</strong> Draw a rectangle, square, circle, or polygon on the map with the pencil tool, upload a file (<code>.kml</code>, <code>.geojson</code>, <code>.shp</code>), or pick a sample area.</div>
+            </div>
+            <div class="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-800/70 border border-slate-700/80">
+              <span class="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 font-bold flex items-center justify-center shrink-0">2</span>
+              <div><strong>Generate 2m DTM (Step 2):</strong> Click <em>Run Super-Resolution</em> to ingest cloud elevation &amp; basemap tiles. Switch between Elevation, Slope, Aspect, or Insolation, units (<code>m/ft</code>, <code>°/%</code>), Roughness, and Volumetric 3D View.</div>
+            </div>
+            <div class="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-800/70 border border-slate-700/80">
+              <span class="w-5 h-5 rounded-full bg-purple-400 text-slate-950 font-bold flex items-center justify-center shrink-0">3</span>
+              <div><strong>Optional Analyses (Step 3):</strong> Enable only what you need: <em>Topographic Profile</em>, <em>D8 Drainage &amp; Pour-Point Basin</em>, <em>Contour Lines</em>, or <em>EMBRAPA Relief Table</em>.</div>
+            </div>
+            <div class="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-800/70 border border-slate-700/80">
+              <span class="w-5 h-5 rounded-full bg-amber-400 text-slate-950 font-bold flex items-center justify-center shrink-0">4</span>
+              <div><strong>Export (Step 4):</strong> Download rasters in <strong>GeoTIFF (.tif)</strong>, <strong>ASC</strong>, <strong>Shapefile (.zip)</strong>, or a <strong>Screen + Legend PNG</strong>.</div>
+            </div>
+          </div>
         `
       }
     };
@@ -1150,7 +1251,19 @@ git push origin main</pre>
       customPolygonLatLngs: null,
       activeView: 'map',
       is3D: false,
-      exaggeration3D: 2.2,
+      exaggeration3D: 2.0,
+      roughness: 0.25,
+      texture3DMode: 'fusion',
+      fusion3DBaseRatio: 0.55,
+      activeBasemap: 'sat',
+      compareMode: '2m',
+      measurePoints: [],
+      realTileStatus: 'Aguardando',
+      realAoiWidthM: 0,
+      realAoiHeightM: 0,
+      realBaseDem30m: null,
+      realOpticalEdge: null,
+      realBasemapCanvas: null,
       renderLayer: 'dtm2m',       // dtm2m | slope2m | aspect2m | insolation2m | dsm30m | tobler2m
       palette: 'terrain',         // terrain | turbo | viridis | magma | rdylgn | aspect_hsv | grayscale
       elevUnit: 'm',              // m | ft
@@ -1428,6 +1541,185 @@ git push origin main</pre>
     }
 
     // ============================================================================
+    // REAL CLOUD TILE INGESTION (AWS TERRARIUM 30m DEM + ESRI/OSM BASEMAP TEXTURE)
+    // ============================================================================
+    function lonLatToTile(lon, lat, zoom) {
+      const n = Math.pow(2, zoom);
+      const x = Math.floor(((lon + 180.0) / 360.0) * n);
+      const latRad = (lat * Math.PI) / 180.0;
+      const y = Math.floor(((1.0 - Math.log(Math.tan(latRad) + 1.0 / Math.cos(latRad)) / Math.PI) / 2.0) * n);
+      return { x, y };
+    }
+
+    function tileToLonLatBounds(tx, ty, zoom) {
+      const n = Math.pow(2, zoom);
+      const wLon = (tx / n) * 360.0 - 180.0;
+      const eLon = ((tx + 1) / n) * 360.0 - 180.0;
+      const nLat = (Math.atan(Math.sinh(Math.PI * (1.0 - (2.0 * ty) / n))) * 180.0) / Math.PI;
+      const sLat = (Math.atan(Math.sinh(Math.PI * (1.0 - (2.0 * (ty + 1)) / n))) * 180.0) / Math.PI;
+      return { wLon, eLon, sLat, nLat };
+    }
+
+    function loadCrossOriginImage(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('Tile blocked/offline'));
+        img.src = url;
+      });
+    }
+
+    async function fetchRealCloudTilesAndRunSR() {
+      const bounds = getActiveBounds();
+      const [[sLat, wLon], [nLat, eLon]] = bounds;
+      const midLat = (sLat + nLat) / 2.0;
+      const cosLat = Math.cos((midLat * Math.PI) / 180.0);
+
+      const widthM = Math.max(40, (eLon - wLon) * 111320.0 * cosLat);
+      const heightM = Math.max(40, (nLat - sLat) * 111320.0);
+      const areaHa = (widthM * heightM) / 10000.0;
+      state.realAoiWidthM = widthM;
+      state.realAoiHeightM = heightM;
+
+      const targetCols = Math.min(160, Math.max(80, Math.round(widthM / 2.0)));
+      const targetRows = Math.min(160, Math.max(80, Math.round(heightM / 2.0)));
+      const N = Math.max(targetCols, targetRows);
+      state.gridSize = N;
+      const effStepM = Math.max(widthM, heightM) / N;
+
+      appendLog(`[1/5] BBox métrica: ${Math.round(widthM)}m × ${Math.round(heightM)}m (${areaHa.toFixed(1)} ha) | Grade ${N}×${N} px (passo ~${effStepM.toFixed(2)}m).`, 'info');
+      document.getElementById('readoutGridDims').textContent = `${N}×${N} px (~${effStepM.toFixed(1)}m)`;
+
+      const demZoom = 13;
+      const tMin = lonLatToTile(wLon, nLat, demZoom);
+      const tMax = lonLatToTile(eLon, sLat, demZoom);
+      const txCount = Math.min(3, Math.max(1, tMax.x - tMin.x + 1));
+      const tyCount = Math.min(3, Math.max(1, tMax.y - tMin.y + 1));
+
+      appendLog(`[2/5] Baixando ${txCount * tyCount} tile(s) AWS Terrarium (30m) em z=${demZoom}...`, 'info');
+
+      try {
+        const demCanvas = document.createElement('canvas');
+        demCanvas.width = txCount * 256;
+        demCanvas.height = tyCount * 256;
+        const dCtx = demCanvas.getContext('2d');
+
+        const demPromises = [];
+        for (let dy = 0; dy < tyCount; dy++) {
+          for (let dx = 0; dx < txCount; dx++) {
+            const tx = tMin.x + dx;
+            const ty = tMin.y + dy;
+            const url = `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${demZoom}/${tx}/${ty}.png`;
+            demPromises.push(
+              loadCrossOriginImage(url).then((img) => {
+                dCtx.drawImage(img, dx * 256, dy * 256);
+              })
+            );
+          }
+        }
+        await Promise.all(demPromises);
+
+        const tlBounds = tileToLonLatBounds(tMin.x, tMin.y, demZoom);
+        const brBounds = tileToLonLatBounds(tMin.x + txCount - 1, tMin.y + tyCount - 1, demZoom);
+        const demPixels = dCtx.getImageData(0, 0, demCanvas.width, demCanvas.height).data;
+
+        const sampled30m = new Float32Array(N * N);
+        for (let y = 0; y < N; y++) {
+          const lat = nLat - (y / (N - 1)) * (nLat - sLat);
+          const vFrac = (tlBounds.nLat - lat) / (tlBounds.nLat - brBounds.sLat);
+          const py = Math.min(demCanvas.height - 1, Math.max(0, Math.floor(vFrac * (demCanvas.height - 1))));
+          for (let x = 0; x < N; x++) {
+            const lon = wLon + (x / (N - 1)) * (eLon - wLon);
+            const uFrac = (lon - tlBounds.wLon) / (brBounds.eLon - tlBounds.wLon);
+            const px = Math.min(demCanvas.width - 1, Math.max(0, Math.floor(uFrac * (demCanvas.width - 1))));
+            const p = (py * demCanvas.width + px) * 4;
+            const elevM = (demPixels[p] * 256.0 + demPixels[p + 1] + demPixels[p + 2] / 256.0) - 32768.0;
+            sampled30m[y * N + x] = elevM;
+          }
+        }
+        state.realBaseDem30m = sampled30m;
+        state.realTileStatus = 'AWS Terrarium Real';
+        appendLog(`[2/5] Tiles AWS Terrarium decodificados em float32 (metros reais)!`, 'ok');
+      } catch (err) {
+        state.realBaseDem30m = null;
+        state.realTileStatus = 'Fallback Local Calibrado';
+        appendLog(`[2/5] Aviso AWS Terrarium (${err.message}). Usando grade calibrada local.`, 'warn');
+      }
+
+      const imgZoom = 16;
+      const iMin = lonLatToTile(wLon, nLat, imgZoom);
+      const iMax = lonLatToTile(eLon, sLat, imgZoom);
+      const ixCount = Math.min(4, Math.max(1, iMax.x - iMin.x + 1));
+      const iyCount = Math.min(4, Math.max(1, iMax.y - iMin.y + 1));
+
+      appendLog(`[3/5] Capturando ${ixCount * iyCount} tile(s) do mapa base (${state.activeBasemap.toUpperCase()}) para guia óptico e textura 3D...`, 'info');
+      try {
+        const baseCanvas = document.createElement('canvas');
+        baseCanvas.width = ixCount * 256;
+        baseCanvas.height = iyCount * 256;
+        const bCtx = baseCanvas.getContext('2d');
+
+        const svcMap = {
+          sat: 'World_Imagery',
+          osm: 'World_Street_Map',
+          topo: 'World_Topo_Map'
+        };
+        const svc = svcMap[state.activeBasemap] || 'World_Imagery';
+
+        const imgPromises = [];
+        for (let dy = 0; dy < iyCount; dy++) {
+          for (let dx = 0; dx < ixCount; dx++) {
+            const tx = iMin.x + dx;
+            const ty = iMin.y + dy;
+            const url = `https://server.arcgisonline.com/ArcGIS/rest/services/${svc}/MapServer/tile/${imgZoom}/${ty}/${tx}`;
+            imgPromises.push(
+              loadCrossOriginImage(url).then((img) => {
+                bCtx.drawImage(img, dx * 256, dy * 256);
+              })
+            );
+          }
+        }
+        await Promise.all(imgPromises);
+
+        const tlB = tileToLonLatBounds(iMin.x, iMin.y, imgZoom);
+        const brB = tileToLonLatBounds(iMin.x + ixCount - 1, iMin.y + iyCount - 1, imgZoom);
+        const sx0 = Math.max(0, ((wLon - tlB.wLon) / (brB.eLon - tlB.wLon)) * baseCanvas.width);
+        const sy0 = Math.max(0, ((tlB.nLat - nLat) / (tlB.nLat - brB.sLat)) * baseCanvas.height);
+        const sx1 = Math.min(baseCanvas.width, ((eLon - tlB.wLon) / (brB.eLon - tlB.wLon)) * baseCanvas.width);
+        const sy1 = Math.min(baseCanvas.height, ((tlB.nLat - sLat) / (tlB.nLat - brB.sLat)) * baseCanvas.height);
+
+        const texCanvas = document.createElement('canvas');
+        texCanvas.width = N * 3;
+        texCanvas.height = N * 3;
+        const tCtx = texCanvas.getContext('2d');
+        tCtx.drawImage(baseCanvas, sx0, sy0, Math.max(10, sx1 - sx0), Math.max(10, sy1 - sy0), 0, 0, texCanvas.width, texCanvas.height);
+        state.realBasemapCanvas = texCanvas;
+
+        const texSample = document.createElement('canvas');
+        texSample.width = N;
+        texSample.height = N;
+        const tsCtx = texSample.getContext('2d');
+        tsCtx.drawImage(texCanvas, 0, 0, N, N);
+        const pxData = tsCtx.getImageData(0, 0, N, N).data;
+        const edgeArr = new Float32Array(N * N);
+        for (let i = 0; i < N * N; i++) {
+          const p = i * 4;
+          const lum = (0.299 * pxData[p] + 0.587 * pxData[p + 1] + 0.114 * pxData[p + 2]) / 255.0;
+          edgeArr[i] = (lum - 0.5) * 2.0;
+        }
+        state.realOpticalEdge = edgeArr;
+        appendLog(`[3/5] Textura óptica ${state.activeBasemap.toUpperCase()} vinculada ao guia TSharp e à malha 3D!`, 'ok');
+      } catch (err) {
+        state.realBasemapCanvas = null;
+        state.realOpticalEdge = null;
+        appendLog(`[3/5] Textura base em modo de contingência (${err.message}).`, 'warn');
+      }
+
+      computeSuperResolutionPipeline();
+    }
+
+    // ============================================================================
     // SUPER-RESOLUTION & GEOMORPHOMETRIC ENGINE (30m -> 2m)
     // ============================================================================
     function computeSuperResolutionPipeline() {
@@ -1479,6 +1771,9 @@ git push origin main</pre>
       const canopyArtifact = new Float32Array(N * N);
       const opticalGuideGrad = new Float32Array(N * N);
 
+      const hasRealDem = state.realBaseDem30m && state.realBaseDem30m.length === N * N;
+      const hasRealOpt = state.realOpticalEdge && state.realOpticalEdge.length === N * N;
+
       for (let y = 0; y < N; y++) {
         const ny = y / (N - 1);
         for (let x = 0; x < N; x++) {
@@ -1486,7 +1781,9 @@ git push origin main</pre>
           const idx = y * N + x;
 
           let macro = 0;
-          if (state.currentAoiKey === 'samambaia') {
+          if (hasRealDem) {
+            macro = state.realBaseDem30m[idx];
+          } else if (state.currentAoiKey === 'samambaia') {
             macro = baseZ + amp * (0.45 * Math.cos(ny * Math.PI * 1.15) + 0.22 * Math.sin(nx * Math.PI * 2.0));
           } else {
             const valleyDist = Math.abs(ny - (0.48 + 0.25 * nx));
@@ -1495,11 +1792,14 @@ git push origin main</pre>
 
           const sDist = streamDist[idx];
           const rDist = roadDist[idx];
-          const streamIncision = sDist < 4.5 ? -3.2 * Math.exp(-0.45 * sDist * sDist) : 0;
-          const microTerrace = 1.35 * Math.sin(nx * 22.0 + ny * 14.0) * Math.cos(ny * 19.0);
+          const streamIncision = sDist < 4.5 ? -2.4 * Math.exp(-0.45 * sDist * sDist) : 0;
+          const roughAmp = 0.25 + state.roughness * 1.9;
+          const microDetail = hasRealOpt
+            ? state.realOpticalEdge[idx] * 1.8 * roughAmp
+            : 1.2 * roughAmp * Math.sin(nx * 22.0 + ny * 14.0) * Math.cos(ny * 19.0);
 
-          rawGround[idx] = macro + streamIncision + microTerrace;
-          opticalGuideGrad[idx] = microTerrace + (sDist < 3.5 ? -2.2 : 0) + (rDist < 2.2 ? -0.45 * Math.sin(nx * 30.0) : 0);
+          rawGround[idx] = macro + streamIncision + microDetail;
+          opticalGuideGrad[idx] = microDetail + (sDist < 3.5 ? -1.8 : 0);
 
           const patchSignal = Math.sin(nx * 16.0) * Math.cos(ny * 16.0);
           let bias = 0;
@@ -1578,7 +1878,8 @@ git push origin main</pre>
 
       // Apply Multi-Pass Gaussian Spatial Smoothing on 2m DTM to eliminate blocky artifacts
       const smoothBuf = new Float32Array(N * N);
-      for (let pass = 0; pass < 3; pass++) {
+      const numSmoothPasses = Math.max(1, Math.round(5 - state.roughness * 4));
+      for (let pass = 0; pass < numSmoothPasses; pass++) {
         for (let y = 0; y < N; y++) {
           for (let x = 0; x < N; x++) {
             let acc = 0, wSum = 0;
@@ -1691,6 +1992,16 @@ git push origin main</pre>
       computeEquidistantContours(dtm2m, N);
       delineateWatershedFromPourPoint(N);
 
+      if (state.hasProcessed) {
+        appendLog(
+          `[4/5] Fusão TSharp (${state.srMethod}) + Rugosidade ${Math.round(state.roughness * 100)}% (${numSmoothPasses}x Gauss) concluída.`,
+          'ok'
+        );
+        appendLog(
+          `[5/5] Derivadas 2m: Min ${minZ.toFixed(1)}m / Máx ${maxZ.toFixed(1)}m | Decliv. Média ${state.stats.meanSlope2mDeg.toFixed(1)}° | Tobler ${state.stats.meanTobler.toFixed(2)} km/h (${state.stats.latencyMs} ms).`,
+          'ok'
+        );
+      }
       updateAllVisuals();
     }
 
@@ -2243,8 +2554,20 @@ git push origin main</pre>
       const imgData = rCtx.createImageData(N, N);
       const data = imgData.data;
 
-      const { array, minVal, maxVal } = getActiveLayerArrayAndRange();
-      const applyShade = state.renderLayer !== 'dsm30m';
+      let { array, minVal, maxVal } = getActiveLayerArrayAndRange();
+      const isShowing30m = state.compareMode === '30m' || state.renderLayer === 'dsm30m';
+      if (state.compareMode === '30m') {
+        array = new Float32Array(N * N);
+        minVal = Infinity;
+        maxVal = -Infinity;
+        for (let k = 0; k < N * N; k++) {
+          const v = formatElev(state.grids.dsm30m[k]);
+          array[k] = v;
+          if (v < minVal) minVal = v;
+          if (v > maxVal) maxVal = v;
+        }
+      }
+      const applyShade = !isShowing30m;
 
       for (let y = 0; y < N; y++) {
         for (let x = 0; x < N; x++) {
@@ -2266,8 +2589,8 @@ git push origin main</pre>
       hiCanvas.width = N * 3;
       hiCanvas.height = N * 3;
       const hCtx = hiCanvas.getContext('2d');
-      hCtx.imageSmoothingEnabled = true;
-      hCtx.imageSmoothingQuality = 'high';
+      hCtx.imageSmoothingEnabled = !isShowing30m;
+      if (!isShowing30m) hCtx.imageSmoothingQuality = 'high';
 
       if (state.customPolygonLatLngs && state.customPolygonLatLngs.length >= 3) {
         const [[sLat, wLon], [nLat, eLon]] = getActiveBounds();
@@ -2526,8 +2849,57 @@ git push origin main</pre>
       document.getElementById('statusDot').className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
       document.getElementById('uploadedFileName').textContent =
         `AOI Desenhada (${bounds[0][0].toFixed(3)}, ${bounds[0][1].toFixed(3)})`;
-      appendLog(`AOI (${state.drawShape.toUpperCase()}) desenhada em tela e super-resolvida para 2m!`, 'ok');
-      computeSuperResolutionPipeline();
+      appendLog(`AOI (${state.drawShape.toUpperCase()}) desenhada! Iniciando ingestão Cloud e Downscaling 2m...`, 'ok');
+      fetchRealCloudTilesAndRunSR();
+    }
+
+    let measureLayerGroup = null;
+    function startMeasureMode(mode) {
+      if (state.is3D) document.getElementById('btnToggle3D').click();
+      exitDrawMode();
+      state.interactionMode = mode;
+      state.measurePoints = [];
+      if (!measureLayerGroup && mapInstance) {
+        measureLayerGroup = L.layerGroup().addTo(mapInstance);
+      }
+      if (measureLayerGroup) measureLayerGroup.clearLayers();
+      document.getElementById('leafletMap').classList.add('drawing-pencil-cursor');
+      document.getElementById('measureReadoutBar').classList.remove('hidden');
+      document.getElementById('measureText').textContent =
+        mode === 'measure_dist' ? 'Clique pontos para medir Distância (m)' : 'Clique vértices para medir Área (m² / ha)';
+      appendLog(`Ferramenta de medição (${mode === 'measure_dist' ? 'Linear' : 'Área'}) ativada.`, 'info');
+    }
+
+    function updateMeasureGraphics() {
+      if (!measureLayerGroup || !mapInstance) return;
+      measureLayerGroup.clearLayers();
+      const pts = state.measurePoints;
+      if (pts.length === 0) return;
+
+      pts.forEach((ll) => {
+        L.circleMarker(ll, { radius: 4.5, color: '#f59e0b', fillColor: '#fde047', fillOpacity: 1 }).addTo(measureLayerGroup);
+      });
+
+      if (state.interactionMode === 'measure_dist' && pts.length >= 2) {
+        L.polyline(pts, { color: '#f59e0b', weight: 3, dashArray: '6, 4' }).addTo(measureLayerGroup);
+        let totalM = 0;
+        for (let i = 0; i < pts.length - 1; i++) totalM += mapInstance.distance(pts[i], pts[i + 1]);
+        document.getElementById('measureText').textContent =
+          totalM >= 1000 ? `Distância: ${(totalM / 1000).toFixed(3)} km (${Math.round(totalM)} m)` : `Distância: ${totalM.toFixed(1)} m`;
+      } else if (state.interactionMode === 'measure_area' && pts.length >= 3) {
+        L.polygon(pts, { color: '#c084fc', weight: 2.5, fillColor: '#a855f7', fillOpacity: 0.25 }).addTo(measureLayerGroup);
+        const lat0 = pts[0].lat;
+        const cosL = Math.cos((lat0 * Math.PI) / 180.0);
+        const xy = pts.map((p) => [p.lng * 111320.0 * cosL, p.lat * 111320.0]);
+        let area2 = 0;
+        for (let i = 0; i < xy.length; i++) {
+          const j = (i + 1) % xy.length;
+          area2 += xy[i][0] * xy[j][1] - xy[j][0] * xy[i][1];
+        }
+        const areaM2 = Math.abs(area2) / 2.0;
+        const areaHa = areaM2 / 10000.0;
+        document.getElementById('measureText').textContent = `Área: ${Math.round(areaM2).toLocaleString()} m² (${areaHa.toFixed(2)} ha)`;
+      }
     }
 
     function handleMapInteractiveClick(latlng) {
@@ -2537,6 +2909,12 @@ git push origin main</pre>
           updatePolygonRubberBand(latlng);
           document.getElementById('drawLiveHint').textContent = `${state.drawPolyPoints.length} vértices`;
         }
+        return;
+      }
+
+      if (state.interactionMode === 'measure_dist' || state.interactionMode === 'measure_area') {
+        state.measurePoints.push(latlng);
+        updateMeasureGraphics();
         return;
       }
 
@@ -2808,6 +3186,8 @@ git push origin main</pre>
     // ============================================================================
     // THREE.JS 3D TERRAIN VIEWER (WITH ON/OFF TOGGLE & PALETTE VERTEX COLORS)
     // ============================================================================
+    let threeSkirtGroup = null;
+
     function initOrUpdateThree3D() {
       if (!state.is3D || !window.THREE) return;
       const container = document.getElementById('threeContainer');
@@ -2816,17 +3196,23 @@ git push origin main</pre>
       const H = container.clientHeight || 540;
 
       if (!threeRenderer) {
-        threeRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+        threeRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
         threeScene = new THREE.Scene();
-        threeCamera = new THREE.PerspectiveCamera(42, W / H, 0.1, 1000);
+        threeCamera = new THREE.PerspectiveCamera(42, W / H, 0.1, 1200);
 
-        const ambient = new THREE.AmbientLight(0xffffff, 0.72);
+        const ambient = new THREE.AmbientLight(0xffffff, 0.78);
         threeScene.add(ambient);
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.65);
-        dirLight.position.set(80, 140, 90);
+        const dirLight = new THREE.DirectionalLight(0xfffbeb, 0.75);
+        dirLight.position.set(95, 160, 85);
         threeScene.add(dirLight);
+        const fillLight = new THREE.DirectionalLight(0x38bdf8, 0.25);
+        fillLight.position.set(-90, 60, -80);
+        threeScene.add(fillLight);
 
-        // Orbit controls on canvas
+        const gridHelper = new THREE.GridHelper(220, 22, 0x38bdf8, 0x1e293b);
+        gridHelper.position.y = -22;
+        threeScene.add(gridHelper);
+
         canvas.addEventListener('mousedown', (e) => {
           isDragging3D = true;
           prevMouse3D = { x: e.clientX, y: e.clientY };
@@ -2840,12 +3226,12 @@ git push origin main</pre>
           const dy = e.clientY - prevMouse3D.y;
           prevMouse3D = { x: e.clientX, y: e.clientY };
           spherical3D.theta -= dx * 0.008;
-          spherical3D.phi = Math.min(1.45, Math.max(0.25, spherical3D.phi - dy * 0.008));
+          spherical3D.phi = Math.min(1.42, Math.max(0.22, spherical3D.phi - dy * 0.008));
           updateCamera3D();
         });
         canvas.addEventListener('wheel', (e) => {
           e.preventDefault();
-          spherical3D.radius = Math.min(280, Math.max(70, spherical3D.radius + e.deltaY * 0.08));
+          spherical3D.radius = Math.min(300, Math.max(75, spherical3D.radius + e.deltaY * 0.08));
           updateCamera3D();
         }, { passive: false });
       }
@@ -2859,9 +3245,17 @@ git push origin main</pre>
         threeTerrainMesh.geometry.dispose();
         threeTerrainMesh.material.dispose();
       }
+      if (threeSkirtGroup) {
+        threeScene.remove(threeSkirtGroup);
+        threeSkirtGroup.children.forEach((m) => {
+          m.geometry.dispose();
+          m.material.dispose();
+        });
+      }
 
       const N = state.gridSize;
-      const geom = new THREE.PlaneGeometry(120, 120, N - 1, N - 1);
+      const blockSize = 120;
+      const geom = new THREE.PlaneGeometry(blockSize, blockSize, N - 1, N - 1);
       geom.rotateX(-Math.PI / 2);
 
       const posAttr = geom.attributes.position;
@@ -2871,13 +3265,39 @@ git push origin main</pre>
       const minZ = state.stats.minElevM;
       const maxZ = state.stats.maxElevM;
       const zSpan = Math.max(5.0, maxZ - minZ);
+      const baseBottomY = -16.0;
+
+      let basePx = null;
+      if (state.realBasemapCanvas) {
+        const sCan = document.createElement('canvas');
+        sCan.width = N;
+        sCan.height = N;
+        const sCtx = sCan.getContext('2d');
+        sCtx.drawImage(state.realBasemapCanvas, 0, 0, N, N);
+        basePx = sCtx.getImageData(0, 0, N, N).data;
+      }
+
+      const blendBase = state.texture3DMode === 'basemap' ? 1.0 : state.texture3DMode === 'palette' ? 0.0 : state.fusion3DBaseRatio;
 
       for (let i = 0; i < posAttr.count; i++) {
         const zElev = state.grids.dtm2m[i];
         const normH = (zElev - minZ) / zSpan;
-        posAttr.setY(i, (normH - 0.5) * 18.0 * state.exaggeration3D);
+        const yPos = normH * 14.0 * state.exaggeration3D - 4.0;
+        posAttr.setY(i, yPos);
 
-        const [r, g, b] = getPixelRGB(i, array, minVal, maxVal, true);
+        const [pr, pg, pb] = getPixelRGB(i, array, minVal, maxVal, true);
+        let r = pr, g = pg, b = pb;
+
+        if (basePx && (state.texture3DMode === 'fusion' || state.texture3DMode === 'basemap')) {
+          const p = i * 4;
+          const br = basePx[p];
+          const bg = basePx[p + 1];
+          const bb = basePx[p + 2];
+          r = Math.round(br * blendBase + pr * (1.0 - blendBase));
+          g = Math.round(bg * blendBase + pg * (1.0 - blendBase));
+          b = Math.round(bb * blendBase + pb * (1.0 - blendBase));
+        }
+
         colors[i * 3] = r / 255.0;
         colors[i * 3 + 1] = g / 255.0;
         colors[i * 3 + 2] = b / 255.0;
@@ -2888,11 +3308,50 @@ git push origin main</pre>
 
       const mat = new THREE.MeshLambertMaterial({
         vertexColors: true,
+        wireframe: state.texture3DMode === 'wireframe',
         side: THREE.DoubleSide
       });
 
       threeTerrainMesh = new THREE.Mesh(geom, mat);
       threeScene.add(threeTerrainMesh);
+
+      threeSkirtGroup = new THREE.Group();
+      const skirtMat = new THREE.MeshLambertMaterial({ color: 0x1e293b, side: THREE.DoubleSide });
+      const buildEdgeSkirt = (indices) => {
+        const positions = [];
+        for (let k = 0; k < indices.length - 1; k++) {
+          const i0 = indices[k];
+          const i1 = indices[k + 1];
+          const x0 = posAttr.getX(i0), y0 = posAttr.getY(i0), z0 = posAttr.getZ(i0);
+          const x1 = posAttr.getX(i1), y1 = posAttr.getY(i1), z1 = posAttr.getZ(i1);
+          positions.push(x0, y0, z0, x1, y1, z1, x0, baseBottomY, z0);
+          positions.push(x1, y1, z1, x1, baseBottomY, z1, x0, baseBottomY, z0);
+        }
+        const sGeom = new THREE.BufferGeometry();
+        sGeom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        sGeom.computeVertexNormals();
+        return new THREE.Mesh(sGeom, skirtMat);
+      };
+
+      const topEdge = [], bottomEdge = [], leftEdge = [], rightEdge = [];
+      for (let i = 0; i < N; i++) {
+        topEdge.push(i);
+        bottomEdge.push((N - 1) * N + i);
+        leftEdge.push(i * N);
+        rightEdge.push(i * N + (N - 1));
+      }
+      threeSkirtGroup.add(buildEdgeSkirt(topEdge));
+      threeSkirtGroup.add(buildEdgeSkirt(bottomEdge));
+      threeSkirtGroup.add(buildEdgeSkirt(leftEdge));
+      threeSkirtGroup.add(buildEdgeSkirt(rightEdge));
+
+      const baseGeom = new THREE.PlaneGeometry(blockSize, blockSize);
+      baseGeom.rotateX(Math.PI / 2);
+      const baseMesh = new THREE.Mesh(baseGeom, new THREE.MeshBasicMaterial({ color: 0x0f172a, side: THREE.DoubleSide }));
+      baseMesh.position.y = baseBottomY;
+      threeSkirtGroup.add(baseMesh);
+
+      threeScene.add(threeSkirtGroup);
       updateCamera3D();
     }
 
@@ -2902,7 +3361,7 @@ git push origin main</pre>
       threeCamera.position.x = radius * Math.sin(phi) * Math.sin(theta);
       threeCamera.position.y = radius * Math.cos(phi);
       threeCamera.position.z = radius * Math.sin(phi) * Math.cos(theta);
-      threeCamera.lookAt(0, 0, 0);
+      threeCamera.lookAt(0, -2, 0);
       threeRenderer.render(threeScene, threeCamera);
     }
 
@@ -3431,7 +3890,7 @@ git push origin main</pre>
       ctx.fillStyle = '#94a3b8';
       ctx.font = '12px Inter, sans-serif';
       ctx.fillText(
-        `AOI: ${PRESET_AOIS[state.currentAoiKey].name} | Paleta: ${activePal.toUpperCase()} | Modo: ${state.is3D ? '3D WebGL' : '2D Map'}`,
+        `AOI: ${PRESET_AOIS[state.currentAoiKey].name} | Paleta: ${activePal.toUpperCase()} | Modo: ${state.is3D ? '3D Volumétrico (' + state.texture3DMode + ')' : '2D (' + state.compareMode + ')'} | Exagero Vert: ${state.exaggeration3D.toFixed(1)}x`,
         28,
         58
       );
@@ -3499,7 +3958,7 @@ git push origin main</pre>
       ctx.fillText(`Altitude (2m): ${ document.getElementById('kpiElevRange').textContent }`, 592, 468);
       ctx.fillText(`Declividade (2m vs 30m): ${ document.getElementById('kpiSlopeCompare').textContent }`, 592, 490);
       ctx.fillText(`Orientação / Insolação: ${ document.getElementById('kpiAspectInsol').textContent } | ${state.stats.meanInsolation.toFixed(0)} Wh/m²`, 592, 512);
-      ctx.fillText(`Velocidade Média Tobler: ${ state.stats.meanTobler.toFixed(2) } km/h`, 592, 534);
+      ctx.fillText(`Exagero Vert: ${state.exaggeration3D.toFixed(1)}x | Rugosidade: ${Math.round(state.roughness * 100)}% | Tobler: ${state.stats.meanTobler.toFixed(2)} km/h`, 592, 534);
 
       const url = out.toDataURL('image/png');
       const a = document.createElement('a');
@@ -4146,6 +4605,16 @@ git push origin main</pre>
           ? 'px-2 py-1 rounded font-semibold bg-sky-500 text-slate-950 transition'
           : 'px-2 py-1 rounded font-semibold text-slate-300 hover:text-white transition';
 
+      document.getElementById('btnTutLangPT').className =
+        lang === 'pt'
+          ? 'px-2 py-0.5 rounded font-semibold bg-sky-500 text-slate-950 transition'
+          : 'px-2 py-0.5 rounded font-semibold text-slate-300 hover:text-white transition';
+
+      document.getElementById('btnTutLangEN').className =
+        lang === 'en'
+          ? 'px-2 py-0.5 rounded font-semibold bg-sky-500 text-slate-950 transition'
+          : 'px-2 py-0.5 rounded font-semibold text-slate-300 hover:text-white transition';
+
       document.getElementById('labelToggle3D').textContent = state.is3D
         ? (lang === 'en' ? '3D View: ON' : 'Vista 3D: ON')
         : (lang === 'en' ? '3D View: OFF (2D)' : 'Vista 3D: OFF (2D)');
@@ -4296,11 +4765,7 @@ git push origin main</pre>
         }
       });
 
-      document.getElementById('sliderExaggeration').addEventListener('input', (e) => {
-        state.exaggeration3D = Number(e.target.value) / 10.0;
-        document.getElementById('valExaggeration').textContent = `${state.exaggeration3D.toFixed(1)}x`;
-        initOrUpdateThree3D();
-      });
+      document.getElementById('sliderExaggeration').addEventListener('input', (e) => syncExaggeration(e.target.value));
 
       // View Tabs
       document.getElementById('tabViewMap').addEventListener('click', () => switchViewTab('map'));
@@ -4340,6 +4805,8 @@ git push origin main</pre>
       // Language Toggle
       document.getElementById('btnLangPT').addEventListener('click', () => applyLanguage('pt'));
       document.getElementById('btnLangEN').addEventListener('click', () => applyLanguage('en'));
+      document.getElementById('btnTutLangPT').addEventListener('click', () => applyLanguage('pt'));
+      document.getElementById('btnTutLangEN').addEventListener('click', () => applyLanguage('en'));
 
       // Unit Switchers (Meters vs Feet, Degrees vs Percent)
       document.getElementById('btnUnitMeters').addEventListener('click', () => {
@@ -4376,9 +4843,81 @@ git push origin main</pre>
       document.getElementById('btnRunSR').addEventListener('click', () => {
         state.hasProcessed = true;
         document.getElementById('statusDot').className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
+        fetchRealCloudTilesAndRunSR();
+        showToast('Ingerindo dados da nuvem e gerando MDT 2m!');
+      });
+
+      document.getElementById('btnMeasureDist').addEventListener('click', () => startMeasureMode('measure_dist'));
+      document.getElementById('btnMeasureArea').addEventListener('click', () => startMeasureMode('measure_area'));
+      document.getElementById('btnFinishMeasure').addEventListener('click', () => {
+        state.interactionMode = null;
+        document.getElementById('leafletMap').classList.remove('drawing-pencil-cursor');
+        appendLog(`Medição finalizada: ${document.getElementById('measureText').textContent}`, 'ok');
+      });
+      document.getElementById('btnClearMeasure').addEventListener('click', () => {
+        state.interactionMode = null;
+        state.measurePoints = [];
+        if (measureLayerGroup) measureLayerGroup.clearLayers();
+        document.getElementById('leafletMap').classList.remove('drawing-pencil-cursor');
+        document.getElementById('measureReadoutBar').classList.add('hidden');
+      });
+
+      document.getElementById('chkLayer2m').addEventListener('change', (e) => {
+        if (e.target.checked) {
+          state.compareMode = '2m';
+          document.getElementById('chkLayer30m').checked = false;
+        } else {
+          state.compareMode = '30m';
+          document.getElementById('chkLayer30m').checked = true;
+        }
+        renderMapOverlays();
+        appendLog(`Visualização alterada para grade ${state.compareMode.toUpperCase()}.`, 'info');
+      });
+
+      document.getElementById('chkLayer30m').addEventListener('change', (e) => {
+        if (e.target.checked) {
+          state.compareMode = '30m';
+          document.getElementById('chkLayer2m').checked = false;
+        } else {
+          state.compareMode = '2m';
+          document.getElementById('chkLayer2m').checked = true;
+        }
+        renderMapOverlays();
+        appendLog(`Visualização alterada para grade ${state.compareMode.toUpperCase()}.`, 'info');
+      });
+
+      document.getElementById('sliderRoughness').addEventListener('input', (e) => {
+        const val = Number(e.target.value);
+        state.roughness = val / 100.0;
+        const lbl = val < 30 ? 'Suave' : val < 70 ? 'Equilibrada' : 'Detalhada';
+        document.getElementById('valRoughness').textContent = `${val}% (${lbl})`;
         computeSuperResolutionPipeline();
-        appendLog(`Super-Resolução 2m suavizada executada (${state.srMethod}) em ${state.stats.latencyMs} ms.`, 'ok');
-        showToast('MDT 2m Suavizado gerado sobre a área selecionada!');
+      });
+
+      const syncExaggeration = (rawVal) => {
+        state.exaggeration3D = Number(rawVal) / 10.0;
+        document.getElementById('sliderExaggeration').value = rawVal;
+        document.getElementById('sliderExagStep2').value = rawVal;
+        document.getElementById('valExaggeration').textContent = `${state.exaggeration3D.toFixed(1)}x`;
+        document.getElementById('valExagStep2').textContent = `${state.exaggeration3D.toFixed(1)}x`;
+        if (state.is3D) initOrUpdateThree3D();
+      };
+      document.getElementById('sliderExagStep2').addEventListener('input', (e) => syncExaggeration(e.target.value));
+
+      document.getElementById('select3DTexture').addEventListener('change', (e) => {
+        state.texture3DMode = e.target.value;
+        initOrUpdateThree3D();
+        appendLog(`Textura 3D alterada para: ${state.texture3DMode}.`, 'info');
+      });
+
+      document.getElementById('slider3DFusion').addEventListener('input', (e) => {
+        state.fusion3DBaseRatio = Number(e.target.value) / 100.0;
+        document.getElementById('val3DFusion').textContent = `${e.target.value}% Base`;
+        if (state.texture3DMode !== 'fusion') {
+          state.texture3DMode = 'fusion';
+          document.getElementById('select3DTexture').value = 'fusion';
+        }
+        initOrUpdateThree3D();
       });
 
       // Clear Map / Reset Button
@@ -4550,24 +5089,30 @@ git push origin main</pre>
         mapInstance.removeLayer(osmTileLayer);
         mapInstance.removeLayer(topoTileLayer);
         if (!mapInstance.hasLayer(satTileLayer)) satTileLayer.addTo(mapInstance);
+        state.activeBasemap = 'sat';
         setActiveBasemapBtn('btnBasemapSat');
         appendLog('Mapa base alterado para Esri World Imagery.', 'info');
+        if (state.hasProcessed) fetchRealCloudTilesAndRunSR();
       });
 
       document.getElementById('btnBasemapOSM').addEventListener('click', () => {
         mapInstance.removeLayer(satTileLayer);
         mapInstance.removeLayer(topoTileLayer);
         if (!mapInstance.hasLayer(osmTileLayer)) osmTileLayer.addTo(mapInstance);
+        state.activeBasemap = 'osm';
         setActiveBasemapBtn('btnBasemapOSM');
         appendLog('Mapa base alterado para OpenStreetMap / Street Map.', 'info');
+        if (state.hasProcessed) fetchRealCloudTilesAndRunSR();
       });
 
       document.getElementById('btnBasemapTopo').addEventListener('click', () => {
         mapInstance.removeLayer(satTileLayer);
         mapInstance.removeLayer(osmTileLayer);
         if (!mapInstance.hasLayer(topoTileLayer)) topoTileLayer.addTo(mapInstance);
+        state.activeBasemap = 'topo';
         setActiveBasemapBtn('btnBasemapTopo');
         appendLog('Mapa base alterado para Esri World Topographic.', 'info');
+        if (state.hasProcessed) fetchRealCloudTilesAndRunSR();
       });
 
       document.getElementById('btnCenterAOI').addEventListener('click', () => {
