@@ -137,24 +137,23 @@
     </div>
   </header>
 
-  <!-- MAIN WORKSPACE: LEFT = BASE MAP (OSM & ESRI IMAGERY) + 3D + PROFILE | RIGHT = COMMANDS + LOG -->
+  <!-- MAIN WORKSPACE: LEFT = CLEAN MAP (OSM & ESRI IMAGERY) + 3D | RIGHT = 4-STEP LOGICAL WORKFLOW -->
   <main class="flex-1 max-w-[1680px] w-full mx-auto px-4 py-3 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
 
     <!-- ====================================================================== -->
-    <!-- LEFT COLUMN (7 cols): MAP (OSM & ESRI IMAGERY), 3D VIEW, LEGEND & PROFILE -->
+    <!-- LEFT COLUMN (7 cols): CLEAN MAP (OSM & ESRI IMAGERY), 3D VIEW & LEGEND -->
     <!-- ====================================================================== -->
     <section id="centerViewport" class="lg:col-span-7 space-y-3">
 
       <!-- VIEW 1: MAPA BASE (OSM & ESRI IMAGERY) + 2D/3D CANVAS -->
       <div id="viewContainerMap" class="glass-panel rounded-xl overflow-hidden relative">
-        <!-- Map Top Bar: Basemaps (OSM / Esri Imagery / Topo), Draw AOI, Trace Profile -->
+        <!-- Map Top Bar: Basemaps (Esri Imagery / OSM / Topo) & Quick Actions -->
         <div class="px-3.5 py-2 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 bg-slate-900/95">
           <div class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span id="mapHeaderTitle" class="text-xs font-semibold text-slate-200">AOI: Samambaia Sul / Terminal Samambaia (DF)</span>
+            <span id="statusDot" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+            <span id="mapHeaderTitle" class="text-xs font-semibold text-slate-200" data-i18n="mapCleanTitle">Mapa Limpo — Selecione ou desenhe uma área no Passo 1</span>
           </div>
 
-          <!-- Basemap Switcher (OSM + Esri World Imagery + Topo) & Map Tools -->
           <div class="flex flex-wrap items-center gap-1.5 text-xs">
             <button id="btnBasemapSat" class="px-2.5 py-1 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40 font-medium transition">
               Esri Imagery
@@ -168,11 +167,11 @@
             <span class="text-slate-700">|</span>
             <button id="btnDrawAOI" class="px-2.5 py-1 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 font-medium flex items-center gap-1 transition">
               <i data-lucide="square-dashed-mouse-pointer" class="w-3.5 h-3.5"></i>
-              <span id="labelDrawAOI" data-i18n="btnDrawAOI">Desenhar AOI</span>
+              <span id="labelDrawAOI" data-i18n="btnDrawAOI">Desenhar Área</span>
             </button>
-            <button id="btnDrawProfile" class="px-2.5 py-1 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25 font-medium flex items-center gap-1 transition">
-              <i data-lucide="ruler" class="w-3.5 h-3.5"></i>
-              <span id="labelDrawProfile" data-i18n="btnTraceProfile">Traçar Perfil A-B</span>
+            <button id="btnClearMap" class="px-2.5 py-1 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25 font-medium flex items-center gap-1 transition" title="Limpar camadas do mapa">
+              <i data-lucide="eraser" class="w-3.5 h-3.5"></i>
+              <span data-i18n="btnClearMap">Limpar Mapa</span>
             </button>
             <button id="btnCenterAOI" class="px-2 py-1 rounded bg-slate-800 text-slate-300 hover:text-white border border-slate-700 flex items-center gap-1" title="Centralizar na AOI">
               <i data-lucide="locate-fixed" class="w-3.5 h-3.5"></i>
@@ -183,67 +182,65 @@
         <!-- 2D Leaflet Map Container -->
         <div id="leafletMap" class="relative"></div>
 
-        <!-- 3D WebGL Terrain View Container (Toggled via 2D/3D ON/OFF button) -->
+        <!-- 3D WebGL Terrain View Container -->
         <div id="threeContainer" class="hidden">
           <div class="absolute top-3 left-3 z-20 bg-slate-900/90 border border-slate-700 rounded-lg px-3 py-2 text-xs space-y-1.5 backdrop-blur">
             <div class="font-semibold text-sky-300 flex items-center gap-1.5">
               <i data-lucide="orbit" class="w-3.5 h-3.5"></i>
-              <span data-i18n="threeTitle">Modelo 3D Super-Resolvido (2m)</span>
+              <span data-i18n="threeTitle">Modelo 3D Super-Resolvido (2m Suavizado)</span>
             </div>
             <p class="text-[11px] text-slate-400" data-i18n="threeHint">Arraste para rotacionar | Scroll para zoom</p>
             <div class="flex items-center gap-2 pt-1">
               <span class="text-[11px] text-slate-300" data-i18n="lblExaggeration">Exagero Vertical:</span>
-              <input id="sliderExaggeration" type="range" min="10" max="50" value="22" class="w-24 h-1.5 bg-slate-700 rounded cursor-pointer" />
-              <span id="valExaggeration" class="mono text-[11px] text-emerald-300">2.2x</span>
+              <input id="sliderExaggeration" type="range" min="10" max="50" value="20" class="w-24 h-1.5 bg-slate-700 rounded cursor-pointer" />
+              <span id="valExaggeration" class="mono text-[11px] text-emerald-300">2.0x</span>
             </div>
           </div>
           <canvas id="threeCanvas" class="w-full h-full block cursor-grab"></canvas>
         </div>
 
-        <!-- On-Screen Legend & Active Palette Overlay (Included in Screen PNG Export) -->
-        <div class="px-4 py-2.5 bg-slate-900/95 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
-          <div class="flex-1 min-w-[240px] space-y-1">
+        <!-- Clean Legend Bar -->
+        <div id="legendFooterBar" class="px-4 py-2.5 bg-slate-900/95 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex-1 min-w-[220px] space-y-1">
             <div class="flex items-center justify-between text-xs">
-              <span id="legendTitle" class="font-semibold text-slate-200">Altitude MDT 2m (m)</span>
-              <span id="legendUnit" class="mono text-[11px] text-sky-300">Paleta: Terrain | SIRGAS 2000 / UTM</span>
+              <span id="legendTitle" class="font-semibold text-slate-200">Aguardando processamento (Passo 2)</span>
+              <span id="legendUnit" class="mono text-[11px] text-sky-300">Paleta: Terrain</span>
             </div>
-            <div id="legendGradientBar" class="h-3 w-full rounded-full border border-slate-700"></div>
+            <div id="legendGradientBar" class="h-2.5 w-full rounded-full border border-slate-700"></div>
             <div class="flex justify-between text-[11px] mono text-slate-400">
-              <span id="legendMin">1122.0 m</span>
-              <span id="legendMid">1136.5 m</span>
-              <span id="legendMax">1151.0 m</span>
+              <span id="legendMin">--</span>
+              <span id="legendMid">--</span>
+              <span id="legendMax">--</span>
             </div>
           </div>
 
           <div class="flex flex-col items-end justify-between text-[11px] mono text-slate-300 space-y-1">
-            <div id="cursorReadout" class="text-right">Passe o mouse ou clique na AOI para inspecionar valores</div>
+            <div id="cursorReadout" class="text-right">Mapa pronto — escolha a área no Passo 1</div>
             <div class="flex items-center gap-3">
-              <span id="badgeScaleFactor" class="text-sky-400">Escala: 30m &rarr; 2m (15x)</span>
-              <span id="latencyReadout" class="text-emerald-400">Inferência: 38 ms</span>
+              <span id="badgeScaleFactor" class="text-sky-400">30m &rarr; 2m (Suavizado)</span>
+              <span id="latencyReadout" class="text-emerald-400">Pronto</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- VIEW 2: SPLIT-SCREEN SWIPE COMPARATOR (30m Raw vs 2m Super-Resolved) -->
+      <!-- VIEW 2: SPLIT-SCREEN SWIPE COMPARATOR -->
       <div id="viewContainerSplit" class="glass-panel rounded-xl p-4 space-y-3 hidden">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h3 class="text-sm font-bold text-white" data-i18n="splitTitle">Comparador Direto: MDE 30m Bruto (Esquerda) vs. MDT 2m TSharp-DEM (Direita)</h3>
-            <p class="text-xs text-slate-400" data-i18n="splitSubtitle">Arraste o divisor para inspecionar o ganho de definição topográfica e a paleta de cores selecionada.</p>
+            <h3 class="text-sm font-bold text-white" data-i18n="splitTitle">Comparador Direto: MDE 30m Bruto (Esquerda) vs. MDT 2m Suavizado (Direita)</h3>
+            <p class="text-xs text-slate-400" data-i18n="splitSubtitle">Arraste o divisor para comparar o modelo bruto de 30m com a superfície suavizada de 2m.</p>
           </div>
           <span class="text-xs mono px-2.5 py-1 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30">30m &rarr; 2m (15x)</span>
         </div>
-
         <div class="relative w-full overflow-hidden rounded-lg border border-slate-700 bg-slate-900 flex justify-center">
           <canvas id="splitCompareCanvas" width="640" height="440" class="w-full max-w-[640px] h-auto block"></canvas>
         </div>
-
         <div class="space-y-1">
           <div class="flex justify-between text-xs mono text-slate-300">
             <span>&larr; MDE 30m Bruto</span>
             <span id="splitPercentReadout" class="text-sky-400">Divisor: 50%</span>
-            <span>MDT 2m Super-Resolvido &rarr;</span>
+            <span>MDT 2m Suavizado &rarr;</span>
           </div>
           <input id="sliderSplitSwipe" type="range" min="5" max="95" value="50" class="w-full h-2 bg-slate-800 rounded-lg cursor-pointer" />
         </div>
@@ -257,50 +254,43 @@
               <i data-lucide="github" class="w-4 h-4 text-sky-400"></i>
               Deploy Direto em `github.com/LeandroGregorio7/tsharp-dem-2m`
             </h3>
-            <p class="text-xs text-slate-400 mt-0.5">
-              Mesma arquitetura estática do `lst-super-resolution`: basta subir os arquivos ou o `.zip` e ativar o GitHub Pages.
-            </p>
           </div>
           <button id="btnCopyGitCommands" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-500 hover:bg-sky-400 text-slate-950 flex items-center gap-1.5 transition">
             <i data-lucide="copy" class="w-3.5 h-3.5"></i> <span data-i18n="btnCopyGit">Copiar Comandos Git</span>
           </button>
         </div>
-
         <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-3 space-y-2 text-xs">
-          <div class="font-semibold text-emerald-300">Comandos para publicar seu novo repositório WebApp:</div>
-          <pre id="gitCommandsBlock" class="mono text-[11px] text-slate-200 bg-slate-950 p-3 rounded border border-slate-800 overflow-x-auto">mkdir tsharp-dem-2m &amp;&amp; cd tsharp-dem-2m
-# Extraia o arquivo tsharp-dem-2m-repo.zip nesta pasta
-git init
-git branch -M main
-git add .
-git commit -m "feat: TSharp-DEM 2m WebApp (2D/3D, KML/GeoJSON/SHP, GeoTIFF/ASC/PNG)"
-git remote add origin https://github.com/LeandroGregorio7/tsharp-dem-2m.git
-git push -u origin main</pre>
+          <pre id="gitCommandsBlock" class="mono text-[11px] text-slate-200 bg-slate-950 p-3 rounded border border-slate-800 overflow-x-auto">git add index.html README.md
+git commit -m "fix: interface limpa em 4 passos, pop-up tutorial e suavizacao gaussiana 2m"
+git push origin main</pre>
         </div>
       </div>
 
-      <!-- TOPOGRAPHIC PROFILE TOOL CARD + PNG PROFILE EXPORT -->
-      <div class="glass-panel rounded-xl p-4 space-y-3">
+      <!-- OPTIONAL TOPOGRAPHIC PROFILE DRAWER (Hidden until user activates Profile Tool in Step 3) -->
+      <div id="profileDrawerCard" class="glass-panel rounded-xl p-4 space-y-3 hidden">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
               <i data-lucide="activity" class="w-4 h-4 text-sky-400"></i>
-              <span data-i18n="profileHeader">Ferramenta de Perfil Topográfico (Transecto A &rarr; B)</span>
+              <span data-i18n="profileHeader">Perfil Topográfico (Transecto A &rarr; B)</span>
             </h2>
-            <p id="profileSubtext" class="text-[11px] text-slate-400">Clique em "Traçar Perfil A-B" no mapa para definir 2 pontos ou alterne o eixo padrão.</p>
+            <p id="profileSubtext" class="text-[11px] text-slate-400">Clique em "Traçar no Mapa" para clicar 2 pontos (A e B) ou alterne o eixo.</p>
           </div>
           <div class="flex items-center gap-2">
+            <button id="btnDrawProfile" class="px-2.5 py-1 rounded text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 flex items-center gap-1 transition">
+              <i data-lucide="ruler" class="w-3.5 h-3.5"></i>
+              <span id="labelDrawProfile" data-i18n="btnTraceProfile">Traçar no Mapa (A-B)</span>
+            </button>
             <button id="btnRotateTransect" class="px-2.5 py-1 rounded text-xs bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 transition">
-              <span data-i18n="btnSwitchAxis">Alternar Eixo A-B</span>
+              <span data-i18n="btnSwitchAxis">Alternar Eixo</span>
             </button>
             <button id="btnExportProfilePNG" class="px-2.5 py-1 rounded text-xs font-semibold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 flex items-center gap-1 transition">
               <i data-lucide="download" class="w-3.5 h-3.5"></i>
-              <span data-i18n="btnExportProfilePng">Exportar Perfil (PNG)</span>
+              <span data-i18n="btnExportProfilePng">Salvar PNG</span>
             </button>
           </div>
         </div>
-
-        <div class="relative h-56 w-full">
+        <div class="relative h-52 w-full">
           <canvas id="transectChartCanvas"></canvas>
         </div>
       </div>
@@ -308,467 +298,455 @@ git push -u origin main</pre>
     </section>
 
     <!-- ====================================================================== -->
-    <!-- RIGHT COLUMN (5 cols): COMMANDS, AOI UPLOAD, UNITS, PALETTES, EXPORTS & LOG -->
+    <!-- RIGHT COLUMN (5 cols): CLEAN 4-STEP LOGICAL WORKFLOW                   -->
     <!-- ====================================================================== -->
     <aside id="rightAnalyticsDock" class="lg:col-span-5 space-y-3">
 
-      <!-- 1. AOI SELECTION: SCREEN DRAW, VECTOR UPLOAD (KML, GEOJSON, SHP) & PRESETS -->
+      <!-- PASSO 1: DEFINIR ÁREA DE INTERESSE (AOI) -->
       <div class="glass-panel rounded-xl p-4 space-y-3">
         <div class="flex items-center justify-between">
-          <h2 class="text-xs font-semibold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
-            <i data-lucide="scan-search" class="w-4 h-4"></i>
-            <span data-i18n="sec1Title">1. Seleção de Área (Desenho ou Upload KML / GeoJSON / SHP)</span>
+          <h2 class="text-xs font-bold uppercase tracking-wider text-sky-400 flex items-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-sky-500/20 border border-sky-400/50 text-sky-300 flex items-center justify-center text-[11px]">1</span>
+            <span data-i18n="sec1Title">Passo 1: Selecionar Área de Estudo (AOI)</span>
           </h2>
-          <span id="readoutDemSource" class="text-[11px] mono text-slate-400">COP-DEM 30m / ANADEM</span>
+          <span id="readoutDemSource" class="text-[11px] mono text-slate-400">COP-DEM 30m</span>
         </div>
 
-        <!-- Preset & Draw Buttons -->
-        <div class="grid grid-cols-3 gap-2 text-xs">
-          <button id="btnPresetSamambaia" class="py-1.5 px-2 rounded-lg font-medium transition bg-sky-500 text-slate-950 truncate">
-            Samambaia, DF
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <button id="btnDrawAOIRight" class="py-2 px-3 rounded-lg font-semibold transition bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 flex items-center justify-center gap-1.5">
+            <i data-lucide="pen-tool" class="w-3.5 h-3.5"></i> <span data-i18n="btnDrawShort">Desenhar Retângulo na Tela</span>
           </button>
-          <button id="btnPresetVicosa" class="py-1.5 px-2 rounded-lg font-medium transition bg-slate-800 text-slate-300 hover:text-white border border-slate-700 truncate">
-            UFV Viçosa, MG
-          </button>
-          <button id="btnDrawAOIRight" class="py-1.5 px-2 rounded-lg font-medium transition bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 flex items-center justify-center gap-1 truncate">
-            <i data-lucide="pen-tool" class="w-3.5 h-3.5"></i> <span data-i18n="btnDrawShort">Desenhar Tela</span>
-          </button>
-        </div>
 
-        <!-- File Upload Input for KML, GeoJSON, SHP/ZIP -->
-        <div class="bg-slate-900/90 border border-dashed border-slate-700 hover:border-sky-500/60 rounded-lg p-2.5 transition">
-          <label for="inputVectorFile" class="flex items-center justify-between cursor-pointer text-xs">
-            <div class="flex items-center gap-2">
-              <i data-lucide="upload-cloud" class="w-4 h-4 text-sky-400"></i>
-              <div>
-                <div class="font-medium text-slate-200" data-i18n="lblUploadVector">Importar Polígono AOI (.kml, .geojson, .json, .shp)</div>
-                <div id="uploadedFileName" class="text-[11px] text-slate-400 mono">Nenhum arquivo externo (Usando BBox em tela)</div>
-              </div>
-            </div>
-            <span class="px-2.5 py-1 rounded bg-slate-800 text-sky-300 border border-slate-700 text-[11px] font-medium" data-i18n="btnBrowse">Carregar</span>
+          <label for="inputVectorFile" class="py-2 px-3 rounded-lg font-semibold transition bg-sky-500/15 text-sky-300 border border-sky-500/30 hover:bg-sky-500/25 flex items-center justify-center gap-1.5 cursor-pointer">
+            <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i>
+            <span data-i18n="btnBrowse">Importar KML / GeoJSON / SHP</span>
           </label>
           <input id="inputVectorFile" type="file" accept=".kml,.geojson,.json,.shp,.zip" class="hidden" />
         </div>
 
-        <!-- Hidden legacy metadata readouts kept for state compatibility -->
-        <div class="grid grid-cols-2 gap-2 text-[11px] mono bg-slate-900/80 px-2.5 py-1.5 rounded border border-slate-800/80">
-          <div class="truncate"><span class="text-slate-400">Vias/Controle:</span> <span id="readoutOsmCount" class="text-amber-300">4 Eixos OSM</span></div>
-          <div class="truncate text-right"><span class="text-slate-400">Malha:</span> <span id="readoutGridDims" class="text-emerald-300">120x120 (2.0m)</span></div>
+        <div class="flex items-center justify-between gap-2 pt-1 text-xs">
+          <span class="text-[11px] text-slate-400" data-i18n="lblPresetOr">Ou carregar área exemplo:</span>
+          <div class="flex items-center gap-1.5">
+            <button id="btnPresetSamambaia" class="py-1 px-2.5 rounded-md font-medium transition bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-[11px]">
+              Samambaia, DF
+            </button>
+            <button id="btnPresetVicosa" class="py-1 px-2.5 rounded-md font-medium transition bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-[11px]">
+              UFV Viçosa, MG
+            </button>
+          </div>
         </div>
 
-        <!-- Execute Super-Resolution Button -->
+        <div class="flex items-center justify-between text-[11px] mono bg-slate-900/70 px-2.5 py-1.5 rounded border border-slate-800/80 text-slate-400">
+          <span id="uploadedFileName" class="truncate">Área pronta para processamento</span>
+          <span id="readoutGridDims" class="text-emerald-400">Malha 2.0m Suavizada</span>
+          <span id="readoutOsmCount" class="hidden">4 Eixos OSM</span>
+        </div>
+      </div>
+
+      <!-- PASSO 2: EXECUTAR SUPER-RESOLUÇÃO 2M & ESCOLHER VISUALIZAÇÃO -->
+      <div class="glass-panel rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 flex items-center justify-center text-[11px]">2</span>
+            <span data-i18n="sec2Title">Passo 2: Gerar MDT 2m &amp; Visualização</span>
+          </h2>
+        </div>
+
+        <!-- Primary Action Button -->
         <button id="btnRunSR" class="w-full py-2.5 px-4 rounded-lg font-bold text-xs bg-gradient-to-r from-sky-500 to-emerald-500 hover:from-sky-400 hover:to-emerald-400 text-slate-950 shadow-lg shadow-sky-500/20 flex items-center justify-center gap-2 transition">
           <i data-lucide="sparkles" class="w-4 h-4"></i>
           <span data-i18n="btnRunSR">Executar Super-Resolução (30m &rarr; 2m)</span>
         </button>
-      </div>
 
-      <!-- 2. VISUALIZATION VARIABLE, UNITS (m/ft, %/deg), PALETTE & PARAMETERS -->
-      <div class="glass-panel rounded-xl p-4 space-y-3">
-        <h2 class="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-          <i data-lucide="sliders" class="w-4 h-4"></i>
-          <span data-i18n="sec2Title">2. Variável Topográfica, Unidades &amp; Paleta de Cores</span>
-        </h2>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          <!-- Variable Selection (Altitude, Declividade, Direção/Aspect, Insolação, MDE 30m, Tobler) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
           <div>
-            <label for="selectRenderLayer" class="block text-[11px] text-slate-300 mb-1 font-medium" data-i18n="lblVariable">Variável de Visualização / Exportação:</label>
+            <label for="selectRenderLayer" class="block text-[11px] text-slate-300 mb-1 font-medium" data-i18n="lblVariable">Variável no Mapa:</label>
             <select id="selectRenderLayer" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-sky-500">
-              <option value="dtm2m">Altitude MDT 2m (Super-Resolvido)</option>
+              <option value="dtm2m">Altitude MDT 2m (Suavizado)</option>
               <option value="slope2m">Declividade 2m (Slope)</option>
-              <option value="aspect2m">Direção / Orientação 2m (Aspect 0-360°)</option>
+              <option value="aspect2m">Direção / Orientação 2m (Aspect)</option>
               <option value="insolation2m">Insolação / Radiação Solar 2m</option>
-              <option value="embrapa2m">Classes de Relevo EMBRAPA (2m — 6 Classes)</option>
-              <option value="d8dir2m">Direção de Fluxo D8 (2m — Códigos 1 a 128)</option>
-              <option value="flowacc2m">Fluxo Acumulado D8 (2m — Log Células)</option>
+              <option value="embrapa2m">Classes de Relevo EMBRAPA (6 Classes)</option>
+              <option value="d8dir2m">Direção de Fluxo D8 (1-128)</option>
+              <option value="flowacc2m">Fluxo Acumulado D8 (Log)</option>
+              <option value="tobler2m">Velocidade Caminhada Tobler (Smart15)</option>
               <option value="dsm30m">Altitude MDE 30m Bruto (Original)</option>
-              <option value="tobler2m">Velocidade Caminhada Tobler 2m (Smart15)</option>
             </select>
           </div>
 
-          <!-- Color Palette Selection -->
           <div>
             <label for="selectColorPalette" class="block text-[11px] text-slate-300 mb-1 font-medium" data-i18n="lblPalette">Paleta de Cores:</label>
             <select id="selectColorPalette" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-sky-500">
-              <option value="terrain">Terrain / Hipsométrica (Clássica MDE)</option>
-              <option value="turbo">Turbo / Rainbow (Alto Contraste)</option>
-              <option value="viridis">Viridis (Perceptualmente Uniforme)</option>
-              <option value="magma">Magma / Termal (Ideal p/ Insolação)</option>
-              <option value="rdylgn">RdYlGn Invertida (Ideal p/ Declividade)</option>
-              <option value="aspect_hsv">Circular HSV (Ideal p/ Direção/Aspect)</option>
-              <option value="grayscale">Escala de Cinza (Sombreado Técnico)</option>
+              <option value="terrain">Terrain / Hipsométrica</option>
+              <option value="turbo">Turbo / Rainbow</option>
+              <option value="viridis">Viridis</option>
+              <option value="magma">Magma / Termal (Insolação)</option>
+              <option value="rdylgn">RdYlGn (Declividade)</option>
+              <option value="aspect_hsv">Circular HSV (Direção)</option>
+              <option value="grayscale">Escala de Cinza (Relevo)</option>
             </select>
           </div>
         </div>
 
-        <!-- Unit Switchers: Elevation (Meters vs Feet) & Slope (Degrees vs Percent) -->
-        <div class="grid grid-cols-2 gap-2.5 pt-1">
-          <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-2 flex items-center justify-between">
-            <span class="text-[11px] text-slate-300 font-medium" data-i18n="lblElevUnit">Unid. Altitude:</span>
-            <div class="flex bg-slate-800 rounded p-0.5 text-[11px] mono">
-              <button id="btnUnitMeters" class="px-2 py-0.5 rounded bg-sky-500 text-slate-950 font-bold">m</button>
-              <button id="btnUnitFeet" class="px-2 py-0.5 rounded text-slate-300 hover:text-white">ft</button>
+        <!-- Units & Opacity in one compact row -->
+        <div class="grid grid-cols-3 gap-2 pt-0.5">
+          <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 flex items-center justify-between">
+            <span class="text-[10px] text-slate-400" data-i18n="lblElevUnit">Alt:</span>
+            <div class="flex bg-slate-800 rounded p-0.5 text-[10px] mono">
+              <button id="btnUnitMeters" class="px-1.5 py-0.5 rounded bg-sky-500 text-slate-950 font-bold">m</button>
+              <button id="btnUnitFeet" class="px-1.5 py-0.5 rounded text-slate-300">ft</button>
             </div>
           </div>
 
-          <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-2 flex items-center justify-between">
-            <span class="text-[11px] text-slate-300 font-medium" data-i18n="lblSlopeUnit">Unid. Declividade:</span>
-            <div class="flex bg-slate-800 rounded p-0.5 text-[11px] mono">
-              <button id="btnSlopeDeg" class="px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-bold">graus (°)</button>
-              <button id="btnSlopePct" class="px-2 py-0.5 rounded text-slate-300 hover:text-white">%</button>
+          <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 flex items-center justify-between">
+            <span class="text-[10px] text-slate-400" data-i18n="lblSlopeUnit">Decliv:</span>
+            <div class="flex bg-slate-800 rounded p-0.5 text-[10px] mono">
+              <button id="btnSlopeDeg" class="px-1.5 py-0.5 rounded bg-emerald-500 text-slate-950 font-bold">°</button>
+              <button id="btnSlopePct" class="px-1.5 py-0.5 rounded text-slate-300">%</button>
             </div>
+          </div>
+
+          <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 flex flex-col justify-center">
+            <div class="flex justify-between text-[10px]">
+              <span class="text-slate-400" data-i18n="lblOpacity">Opacidade</span>
+              <span id="valOpacity" class="mono text-sky-400">68%</span>
+            </div>
+            <input id="sliderOpacity" type="range" min="15" max="95" value="68" class="w-full h-1 bg-slate-800 rounded cursor-pointer mt-0.5" />
           </div>
         </div>
 
-        <!-- Architecture & Sliders -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-          <div>
-            <label for="selectSRMethod" class="block text-[11px] text-slate-300 mb-1" data-i18n="lblMethod">Arquitetura IA:</label>
-            <select id="selectSRMethod" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white">
-              <option value="guided_tsharp">Fusão Guiada TSharp (Óptico + OSM)</option>
-              <option value="dtdl_residual">CNN Residual DTDL (Detrended)</option>
-              <option value="bicubic_raw">Interpolação Bicúbica (Baseline)</option>
-            </select>
+        <!-- Compact KPI Strip -->
+        <div class="grid grid-cols-4 gap-1.5 text-center pt-1">
+          <div class="bg-slate-900/80 border border-slate-800/80 rounded p-1.5">
+            <div class="text-[9px] text-slate-400 uppercase" data-i18n="kpi1Title">Altitude 2m</div>
+            <div id="kpiElevRange" class="text-[11px] font-bold mono text-white">--</div>
+            <div id="kpiBenchmarkNote" class="hidden"></div>
           </div>
-
-          <div>
-            <div class="flex justify-between text-[11px] mb-1">
-              <span class="text-slate-300" data-i18n="lblOpacity">Opacidade Overlay:</span>
-              <span id="valOpacity" class="mono text-sky-400">62%</span>
-            </div>
-            <input id="sliderOpacity" type="range" min="15" max="95" value="62" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer" />
+          <div class="bg-slate-900/80 border border-slate-800/80 rounded p-1.5">
+            <div class="text-[9px] text-slate-400 uppercase" data-i18n="kpi2Title">Declividade</div>
+            <div id="kpiSlopeCompare" class="text-[11px] font-bold mono text-amber-300">--</div>
+            <div id="kpiBiasRemoved" class="hidden"></div>
           </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2.5">
-          <div>
-            <div class="flex justify-between text-[11px] mb-1">
-              <span class="text-slate-300" data-i18n="lblCanopy">Filtro Bare-Earth:</span>
-              <span id="valCanopyRemoval" class="mono text-emerald-400">85%</span>
-            </div>
-            <input id="sliderCanopyRemoval" type="range" min="0" max="100" value="85" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer" />
+          <div class="bg-slate-900/80 border border-slate-800/80 rounded p-1.5">
+            <div class="text-[9px] text-slate-400 uppercase" data-i18n="kpi3Title">Direção/Sol</div>
+            <div id="kpiAspectInsol" class="text-[11px] font-bold mono text-purple-300">--</div>
+            <div id="kpiInsolVal" class="hidden"></div>
           </div>
-
-          <div>
-            <div class="flex justify-between text-[11px] mb-1">
-              <span class="text-slate-300" data-i18n="lblOptical">Nitidez Guia Óptico:</span>
-              <span id="valOpticalAlpha" class="mono text-sky-400">1.25</span>
-            </div>
-            <input id="sliderOpticalAlpha" type="range" min="0" max="200" value="125" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer" />
+          <div class="bg-slate-900/80 border border-slate-800/80 rounded p-1.5">
+            <div class="text-[9px] text-slate-400 uppercase" data-i18n="kpi4Title">Tobler</div>
+            <div id="kpiToblerSpeed" class="text-[11px] font-bold mono text-sky-300">--</div>
+            <div id="kpiCycleSpeed" class="hidden"></div>
           </div>
         </div>
 
-        <!-- Solar Azimuth / Altitude Controls for Insolation & Hillshade -->
-        <div class="grid grid-cols-2 gap-2.5 pt-1 border-t border-slate-800/80">
-          <div>
-            <div class="flex justify-between text-[11px] mb-1">
-              <span class="text-slate-300" data-i18n="lblSunAzimuth">Azimute Solar:</span>
-              <span id="valSunAzimuth" class="mono text-amber-300">315° (NW)</span>
+        <!-- Collapsible Advanced Model Parameters (Clean by default) -->
+        <details class="bg-slate-900/70 border border-slate-800 rounded-lg px-3 py-2 text-xs">
+          <summary class="cursor-pointer font-medium text-slate-300 hover:text-white select-none flex items-center justify-between">
+            <span data-i18n="lblAdvSettings">Ajustes Avançados de IA, Suavização e Sol (Opcional)</span>
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+          </summary>
+          <div class="space-y-2.5 pt-3 mt-2 border-t border-slate-800">
+            <div>
+              <label for="selectSRMethod" class="block text-[11px] text-slate-300 mb-1" data-i18n="lblMethod">Arquitetura de Super-Resolução:</label>
+              <select id="selectSRMethod" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white">
+                <option value="guided_tsharp">Fusão Guiada TSharp (Óptico + OSM Suavizado)</option>
+                <option value="dtdl_residual">CNN Residual DTDL (Detrended)</option>
+                <option value="bicubic_raw">Interpolação Bicúbica Suavizada</option>
+              </select>
             </div>
-            <input id="sliderSunAzimuth" type="range" min="0" max="360" value="315" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer" />
-          </div>
-          <div>
-            <div class="flex justify-between text-[11px] mb-1">
-              <span class="text-slate-300" data-i18n="lblSunAltitude">Elevação Solar:</span>
-              <span id="valSunAltitude" class="mono text-amber-300">45°</span>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <div class="flex justify-between text-[11px] mb-0.5">
+                  <span class="text-slate-300" data-i18n="lblCanopy">Filtro Bare-Earth:</span>
+                  <span id="valCanopyRemoval" class="mono text-emerald-400">85%</span>
+                </div>
+                <input id="sliderCanopyRemoval" type="range" min="0" max="100" value="85" class="w-full h-1.5 bg-slate-800 rounded" />
+              </div>
+              <div>
+                <div class="flex justify-between text-[11px] mb-0.5">
+                  <span class="text-slate-300" data-i18n="lblOptical">Detalhe Guia Óptico:</span>
+                  <span id="valOpticalAlpha" class="mono text-sky-400">0.85</span>
+                </div>
+                <input id="sliderOpticalAlpha" type="range" min="0" max="150" value="85" class="w-full h-1.5 bg-slate-800 rounded" />
+              </div>
             </div>
-            <input id="sliderSunAltitude" type="range" min="10" max="85" value="45" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer" />
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <div class="flex justify-between text-[11px] mb-0.5">
+                  <span class="text-slate-300" data-i18n="lblSunAzimuth">Azimute Solar:</span>
+                  <span id="valSunAzimuth" class="mono text-amber-300">315° (NW)</span>
+                </div>
+                <input id="sliderSunAzimuth" type="range" min="0" max="360" value="315" class="w-full h-1.5 bg-slate-800 rounded" />
+              </div>
+              <div>
+                <div class="flex justify-between text-[11px] mb-0.5">
+                  <span class="text-slate-300" data-i18n="lblSunAltitude">Elevação Solar:</span>
+                  <span id="valSunAltitude" class="mono text-amber-300">45°</span>
+                </div>
+                <input id="sliderSunAltitude" type="range" min="10" max="85" value="45" class="w-full h-1.5 bg-slate-800 rounded" />
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer text-[11px]">
+                <input id="chkOsmGrading" type="checkbox" checked class="rounded border-slate-600 text-sky-500 bg-slate-900" />
+                <span data-i18n="chkOsm">Suavizar Vias e Talvegues OSM</span>
+              </label>
+              <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer text-[11px]">
+                <input id="chkShowVectors" type="checkbox" class="rounded border-slate-600 text-sky-500 bg-slate-900" />
+                <span data-i18n="chkVectors">Mostrar Eixos OSM no Mapa</span>
+              </label>
+            </div>
           </div>
-        </div>
-
-        <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-800/80 text-xs">
-          <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer">
-            <input id="chkOsmGrading" type="checkbox" checked class="rounded border-slate-600 text-sky-500 bg-slate-900" />
-            <span data-i18n="chkOsm">Condicionamento Viário/Hidro OSM</span>
-          </label>
-          <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer">
-            <input id="chkShowVectors" type="checkbox" checked class="rounded border-slate-600 text-sky-500 bg-slate-900" />
-            <span data-i18n="chkVectors">Exibir Vetores e Transecto</span>
-          </label>
-        </div>
+        </details>
       </div>
 
-      <!-- 3. KPI SUMMARY STRIP -->
-      <div class="glass-panel rounded-xl p-3.5">
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-          <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-2">
-            <div class="text-[10px] text-slate-400 uppercase" data-i18n="kpi1Title">Altitude 2m</div>
-            <div id="kpiElevRange" class="text-xs font-bold mono text-white mt-0.5">1124 / 1150 m</div>
-            <div id="kpiBenchmarkNote" class="text-[9px] text-emerald-400 truncate">Ref: 1136,0 m</div>
-          </div>
-          <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-2">
-            <div class="text-[10px] text-slate-400 uppercase" data-i18n="kpi2Title">Declividade Média</div>
-            <div id="kpiSlopeCompare" class="text-xs font-bold mono text-amber-300 mt-0.5">4.8° vs 8.9°</div>
-            <div id="kpiBiasRemoved" class="text-[9px] text-slate-400">Dossel: -6.4 m</div>
-          </div>
-          <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-2">
-            <div class="text-[10px] text-slate-400 uppercase" data-i18n="kpi3Title">Orientação / Sol</div>
-            <div id="kpiAspectInsol" class="text-xs font-bold mono text-purple-300 mt-0.5">198° (S-SW)</div>
-            <div id="kpiInsolVal" class="text-[9px] text-amber-300">Insol: 784 Wh/m²</div>
-          </div>
-          <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-2">
-            <div class="text-[10px] text-slate-400 uppercase" data-i18n="kpi4Title">Tobler Smart15</div>
-            <div id="kpiToblerSpeed" class="text-xs font-bold mono text-sky-300 mt-0.5">4.72 km/h</div>
-            <div id="kpiCycleSpeed" class="text-[9px] text-slate-400">Pedal: 14.7 km/h</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 3B. D8 FLOW DIRECTION & ACCUMULATED DRAINAGE NETWORK EXTRACTION (2m) -->
-      <div class="glass-panel rounded-xl p-4 space-y-3 border border-cyan-500/30">
+      <!-- PASSO 3: FERRAMENTAS DE ANÁLISE OPCIONAIS (SÓ ABREM QUANDO SELECIONADAS) -->
+      <div class="glass-panel rounded-xl p-4 space-y-3">
         <div class="flex items-center justify-between">
-          <h2 class="text-xs font-semibold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
-            <i data-lucide="waves" class="w-4 h-4"></i>
-            <span data-i18n="secD8Title">Hidrologia 2m: Direção D8 &amp; Rede de Drenagem Acumulada</span>
+          <h2 class="text-xs font-bold uppercase tracking-wider text-purple-400 flex items-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-purple-500/20 border border-purple-400/50 text-purple-300 flex items-center justify-center text-[11px]">3</span>
+            <span data-i18n="secOptTitle">Passo 3: Análises Opcionais (Clique para Ativar)</span>
           </h2>
-          <span id="d8SummaryBadge" class="text-[10px] mono px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-            Strahler Máx: 4ª Ordem
-          </span>
         </div>
 
-        <div class="grid grid-cols-3 gap-2 text-center text-[11px] mono">
-          <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-2">
-            <div class="text-[10px] text-slate-400" data-i18n="lblD8Segments">Tramos D8 (2m)</div>
-            <div id="kpiD8Segments" class="text-xs font-bold text-cyan-300 mt-0.5">42 canais</div>
-          </div>
-          <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-2">
-            <div class="text-[10px] text-slate-400" data-i18n="lblD8MaxAcc">Fluxo Máximo</div>
-            <div id="kpiD8MaxAcc" class="text-xs font-bold text-emerald-300 mt-0.5">1.840 cél.</div>
-          </div>
-          <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-2">
-            <div class="text-[10px] text-slate-400" data-i18n="lblD8Catchment">Área Captação</div>
-            <div id="kpiD8AreaHa" class="text-xs font-bold text-sky-300 mt-0.5">0.74 ha</div>
-          </div>
-        </div>
+        <!-- 4 Optional Analysis Toggle Pills -->
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <button id="btnOptTabProfile" class="py-2 px-2.5 rounded-lg font-medium bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 flex items-center justify-between transition">
+            <span class="flex items-center gap-1.5"><i data-lucide="activity" class="w-3.5 h-3.5 text-sky-400"></i> <span data-i18n="optProfile">Perfil Topográfico</span></span>
+            <span id="badgeOptProfile" class="text-[10px] mono text-slate-400">OFF</span>
+          </button>
 
-        <div>
-          <div class="flex justify-between text-[11px] mb-1">
-            <span class="text-slate-300" data-i18n="lblD8Threshold">Limiar de Acumulação D8 (Células de 2m):</span>
-            <span id="valD8Threshold" class="mono text-cyan-300">55 células (220 m²)</span>
-          </div>
-          <input id="sliderD8Threshold" type="range" min="20" max="240" value="55" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer" />
-        </div>
+          <button id="btnOptTabD8" class="py-2 px-2.5 rounded-lg font-medium bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 flex items-center justify-between transition">
+            <span class="flex items-center gap-1.5"><i data-lucide="waves" class="w-3.5 h-3.5 text-cyan-400"></i> <span data-i18n="optD8">Drenagem D8 &amp; Bacia</span></span>
+            <span id="badgeOptD8" class="text-[10px] mono text-slate-400">OFF</span>
+          </button>
 
-        <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <label class="flex items-center gap-1.5 text-slate-200 cursor-pointer">
-            <input id="chkShowD8Network" type="checkbox" checked class="rounded border-slate-600 text-cyan-500 bg-slate-900" />
-            <span data-i18n="chkShowD8">Sobrepor Rede D8 (Strahler) no Mapa</span>
-          </label>
-          <button id="btnRunD8Extraction" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 flex items-center gap-1 transition">
-            <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
-            <span data-i18n="btnExtractD8">Extrair Rede D8</span>
+          <button id="btnOptTabContours" class="py-2 px-2.5 rounded-lg font-medium bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 flex items-center justify-between transition">
+            <span class="flex items-center gap-1.5"><i data-lucide="spline" class="w-3.5 h-3.5 text-amber-400"></i> <span data-i18n="optContours">Curvas de Nível</span></span>
+            <span id="badgeOptContours" class="text-[10px] mono text-slate-400">OFF</span>
+          </button>
+
+          <button id="btnOptTabEmbrapa" class="py-2 px-2.5 rounded-lg font-medium bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 flex items-center justify-between transition">
+            <span class="flex items-center gap-1.5"><i data-lucide="table-2" class="w-3.5 h-3.5 text-emerald-400"></i> <span data-i18n="optEmbrapa">Relevo EMBRAPA</span></span>
+            <span id="badgeOptEmbrapa" class="text-[10px] mono text-slate-400">Ver</span>
           </button>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-slate-800/80">
-          <button id="btnExportD8GeoJSON" class="py-2 px-3 rounded-lg text-xs font-semibold bg-cyan-500 hover:bg-cyan-400 text-slate-950 flex items-center justify-center gap-1.5 transition">
-            <i data-lucide="file-code" class="w-4 h-4"></i>
-            <span data-i18n="btnExportD8Geojson">Exportar Drenagem (.geojson)</span>
-          </button>
-          <button id="btnExportD8Shapefile" class="py-2 px-3 rounded-lg text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center justify-center gap-1.5 transition">
-            <i data-lucide="archive" class="w-4 h-4"></i>
-            <span data-i18n="btnExportD8Shp">Exportar Shapefile (.zip)</span>
-          </button>
-        </div>
-
-        <!-- WATERSHED DELINEATION BY POUR POINT (EXUTÓRIO CLICADO) -->
-        <div class="pt-2 border-t border-slate-800/90 space-y-2">
+        <!-- Optional Drawer A: D8 Hydrology & Pour-Point Watershed (Hidden by default) -->
+        <div id="optPanelD8" class="hidden bg-slate-900/90 border border-cyan-500/30 rounded-lg p-3 space-y-2.5">
           <div class="flex items-center justify-between">
-            <span class="text-[11px] font-semibold text-emerald-300 flex items-center gap-1">
-              <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
-              <span data-i18n="lblWatershedTitle">Delimitação de Bacia por Exutório (2m)</span>
-            </span>
-            <span id="watershedStatBadge" class="text-[10px] mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-              Área: 1.42 ha
-            </span>
+            <span class="text-xs font-semibold text-cyan-300" data-i18n="secD8Title">Drenagem D8 &amp; Bacia por Exutório (2m)</span>
+            <span id="d8SummaryBadge" class="text-[10px] mono px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300">Strahler</span>
           </div>
 
-          <div class="grid grid-cols-3 gap-1.5 text-xs">
-            <button id="btnPickPourPoint" class="py-1.5 px-2 rounded-lg font-semibold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 flex items-center justify-center gap-1 transition truncate">
-              <i data-lucide="mouse-pointer-click" class="w-3.5 h-3.5"></i>
-              <span id="labelPickPourPoint" data-i18n="btnPickOutlet">Clicar Exutório</span>
-            </button>
-            <button id="btnExportWatershedGeoJSON" class="py-1.5 px-2 rounded-lg font-medium bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 flex items-center justify-center gap-1 transition truncate">
-              <i data-lucide="hexagon" class="w-3.5 h-3.5"></i>
-              <span data-i18n="btnExpWsGeojson">Bacia (.geojson)</span>
-            </button>
-            <button id="btnExportWatershedShp" class="py-1.5 px-2 rounded-lg font-medium bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 flex items-center justify-center gap-1 transition truncate">
-              <i data-lucide="archive" class="w-3.5 h-3.5"></i>
-              <span data-i18n="btnExpWsShp">Bacia SHP (.zip)</span>
+          <div class="grid grid-cols-3 gap-1.5 text-center text-[11px] mono">
+            <div class="bg-slate-950 p-1.5 rounded border border-slate-800">
+              <div class="text-[9px] text-slate-400" data-i18n="lblD8Segments">Canais D8</div>
+              <div id="kpiD8Segments" class="font-bold text-cyan-300">--</div>
+            </div>
+            <div class="bg-slate-950 p-1.5 rounded border border-slate-800">
+              <div class="text-[9px] text-slate-400" data-i18n="lblD8MaxAcc">Fluxo Máx</div>
+              <div id="kpiD8MaxAcc" class="font-bold text-emerald-300">--</div>
+            </div>
+            <div class="bg-slate-950 p-1.5 rounded border border-slate-800">
+              <div class="text-[9px] text-slate-400" data-i18n="lblD8Catchment">Bacia</div>
+              <div id="kpiD8AreaHa" class="font-bold text-sky-300">--</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-[11px] mb-1">
+              <span class="text-slate-300" data-i18n="lblD8Threshold">Sensibilidade / Limiar de Drenagem:</span>
+              <span id="valD8Threshold" class="mono text-cyan-300">65 cél.</span>
+            </div>
+            <input id="sliderD8Threshold" type="range" min="25" max="240" value="65" class="w-full h-1.5 bg-slate-800 rounded cursor-pointer" />
+          </div>
+
+          <div class="flex items-center justify-between text-xs">
+            <label class="flex items-center gap-1.5 text-slate-200 cursor-pointer">
+              <input id="chkShowD8Network" type="checkbox" class="rounded border-slate-600 text-cyan-500 bg-slate-900" />
+              <span data-i18n="chkShowD8">Exibir Rede D8 no Mapa</span>
+            </label>
+            <button id="btnRunD8Extraction" class="px-2 py-1 rounded text-[11px] font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+              <span data-i18n="btnExtractD8">Recalcular D8</span>
             </button>
           </div>
-        </div>
-      </div>
 
-      <!-- 3C. EQUIDISTANT CONTOUR LINES (CURVAS DE NÍVEL 1m, 2m, 5m, 10m) -->
-      <div class="glass-panel rounded-xl p-4 space-y-2.5 border border-amber-500/25">
-        <div class="flex items-center justify-between">
-          <h2 class="text-xs font-semibold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
-            <i data-lucide="spline" class="w-4 h-4"></i>
-            <span data-i18n="secContoursTitle">Curvas de Nível Equidistantes (MDT 2m)</span>
-          </h2>
-          <span id="contourCountBadge" class="text-[10px] mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
-            24 isolinhas
-          </span>
+          <div class="grid grid-cols-2 gap-1.5">
+            <button id="btnExportD8GeoJSON" class="py-1.5 px-2 rounded text-[11px] font-semibold bg-cyan-500 text-slate-950">
+              <span data-i18n="btnExportD8Geojson">Drenagem (.geojson)</span>
+            </button>
+            <button id="btnExportD8Shapefile" class="py-1.5 px-2 rounded text-[11px] font-semibold bg-amber-500 text-slate-950">
+              <span data-i18n="btnExportD8Shp">Drenagem SHP (.zip)</span>
+            </button>
+          </div>
+
+          <div class="pt-2 border-t border-slate-800 space-y-1.5">
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="text-emerald-300 font-medium" data-i18n="lblWatershedTitle">Delimitar Bacia por Exutório:</span>
+              <span id="watershedStatBadge" class="mono text-[10px] text-slate-400">Clique num canal</span>
+            </div>
+            <div class="grid grid-cols-3 gap-1.5 text-[11px]">
+              <button id="btnPickPourPoint" class="py-1.5 px-2 rounded font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 truncate">
+                <span id="labelPickPourPoint" data-i18n="btnPickOutlet">Clicar Exutório</span>
+              </button>
+              <button id="btnExportWatershedGeoJSON" class="py-1.5 px-2 rounded bg-slate-800 text-sky-300 border border-slate-700 truncate">
+                <span data-i18n="btnExpWsGeojson">Bacia (.geojson)</span>
+              </button>
+              <button id="btnExportWatershedShp" class="py-1.5 px-2 rounded bg-slate-800 text-amber-300 border border-slate-700 truncate">
+                <span data-i18n="btnExpWsShp">Bacia SHP (.zip)</span>
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <div class="flex items-center gap-2">
-            <span class="text-slate-300 text-[11px]" data-i18n="lblContourStep">Equidistância:</span>
-            <select id="selectContourInterval" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white mono">
-              <option value="1">1.0 m (Microtopografia)</option>
-              <option value="2" selected>2.0 m (Padrão Urbano)</option>
-              <option value="5">5.0 m (Semidetalhe)</option>
-              <option value="10">10.0 m (Macro)</option>
+        <!-- Optional Drawer B: Smooth Equidistant Contours (Hidden by default) -->
+        <div id="optPanelContours" class="hidden bg-slate-900/90 border border-amber-500/30 rounded-lg p-3 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-amber-300" data-i18n="secContoursTitle">Curvas de Nível Suavizadas (Chaikin 2m)</span>
+            <span id="contourCountBadge" class="text-[10px] mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-300">2.0m</span>
+          </div>
+          <div class="flex items-center justify-between gap-2 text-xs">
+            <select id="selectContourInterval" class="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white mono">
+              <option value="1">Equidistância: 1.0 m</option>
+              <option value="2" selected>Equidistância: 2.0 m</option>
+              <option value="5">Equidistância: 5.0 m</option>
+              <option value="10">Equidistância: 10.0 m</option>
             </select>
+            <label class="flex items-center gap-1.5 text-slate-200 cursor-pointer text-xs">
+              <input id="chkShowContours" type="checkbox" class="rounded border-slate-600 text-amber-500 bg-slate-900" />
+              <span data-i18n="chkShowContours">Exibir no Mapa</span>
+            </label>
           </div>
-
-          <label class="flex items-center gap-1.5 text-slate-200 cursor-pointer text-xs">
-            <input id="chkShowContours" type="checkbox" checked class="rounded border-slate-600 text-amber-500 bg-slate-900" />
-            <span data-i18n="chkShowContours">Exibir Curvas no Mapa</span>
-          </label>
+          <div class="grid grid-cols-2 gap-1.5">
+            <button id="btnExportContoursGeoJSON" class="py-1.5 px-2 rounded text-[11px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+              <span data-i18n="btnExpContoursGeojson">Curvas (.geojson)</span>
+            </button>
+            <button id="btnExportContoursShp" class="py-1.5 px-2 rounded text-[11px] font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/40">
+              <span data-i18n="btnExpContoursShp">Curvas SHP (.zip)</span>
+            </button>
+          </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-2 pt-1">
-          <button id="btnExportContoursGeoJSON" class="py-1.5 px-3 rounded-lg text-xs font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 flex items-center justify-center gap-1.5 transition">
-            <i data-lucide="file-code" class="w-3.5 h-3.5"></i>
-            <span data-i18n="btnExpContoursGeojson">Curvas (.geojson)</span>
-          </button>
-          <button id="btnExportContoursShp" class="py-1.5 px-3 rounded-lg text-xs font-semibold bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 flex items-center justify-center gap-1.5 transition">
-            <i data-lucide="archive" class="w-3.5 h-3.5"></i>
-            <span data-i18n="btnExpContoursShp">Curvas SHP (.zip)</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- 3D. EMBRAPA RELIEF CLASSIFICATION ZONAL TABLE (HECTARES & %) -->
-      <div class="glass-panel rounded-xl p-4 space-y-2.5 border border-emerald-500/25">
-        <div class="flex items-center justify-between">
-          <h2 class="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-            <i data-lucide="table-2" class="w-4 h-4"></i>
-            <span data-i18n="secEmbrapaTitle">Classificação de Relevo EMBRAPA (SiBCS 2m)</span>
-          </h2>
-          <button id="btnExportEmbrapaCSV" class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 transition">
-            <span data-i18n="btnExpEmbrapaCsv">Exportar CSV</span>
-          </button>
-        </div>
-
-        <div class="overflow-x-auto">
+        <!-- Optional Drawer C: EMBRAPA Zonal Table (Hidden by default) -->
+        <div id="optPanelEmbrapa" class="hidden bg-slate-900/90 border border-emerald-500/30 rounded-lg p-3 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-emerald-300" data-i18n="secEmbrapaTitle">Classes de Relevo EMBRAPA (ha e %)</span>
+            <button id="btnExportEmbrapaCSV" class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+              <span data-i18n="btnExpEmbrapaCsv">Baixar CSV</span>
+            </button>
+          </div>
           <table class="w-full text-left text-[11px] mono">
             <thead>
               <tr class="border-b border-slate-800 text-slate-400">
-                <th class="py-1" data-i18n="thEmbrapaClass">Classe EMBRAPA</th>
-                <th class="py-1" data-i18n="thEmbrapaRange">Decliv. (%)</th>
-                <th class="py-1 text-right" data-i18n="thEmbrapaHa">Área (ha)</th>
+                <th class="py-1" data-i18n="thEmbrapaClass">Classe</th>
+                <th class="py-1" data-i18n="thEmbrapaRange">Faixa</th>
+                <th class="py-1 text-right" data-i18n="thEmbrapaHa">ha</th>
                 <th class="py-1 text-right">%</th>
               </tr>
             </thead>
-            <tbody id="embrapaTableBody" class="divide-y divide-slate-800/60 text-slate-200">
-              <!-- Populated dynamically -->
-            </tbody>
+            <tbody id="embrapaTableBody" class="divide-y divide-slate-800/60 text-slate-200"></tbody>
           </table>
         </div>
       </div>
 
-      <!-- 4. EXPORT DELIVERABLES ACCORDING TO ACTIVE SELECTION (GEOTIFF, ASC, XYZ, GEOJSON, SCREEN PNG) -->
+      <!-- PASSO 4: EXPORTAÇÃO RASTER, PNG COM LEGENDA & LOG COMPACTO -->
       <div class="glass-panel rounded-xl p-4 space-y-2.5">
         <div class="flex items-center justify-between">
-          <h2 class="text-xs font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-            <i data-lucide="hard-drive-download" class="w-4 h-4"></i>
-            <span data-i18n="sec3Title">3. Exportação Raster (Conforme Seleção) &amp; Tela PNG</span>
+          <h2 class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-400/50 text-amber-300 flex items-center justify-center text-[11px]">4</span>
+            <span data-i18n="sec3Title">Passo 4: Exportar Raster &amp; Carta PNG</span>
           </h2>
-          <span id="exportActiveBadge" class="text-[10px] mono px-2 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30">
-            Ativo: Altitude (m)
+          <span id="exportActiveBadge" class="text-[10px] mono px-2 py-0.5 rounded bg-sky-500/15 text-sky-300">
+            Altitude (m)
           </span>
         </div>
 
-        <!-- Format Selector + Export Raster Button -->
         <div class="flex flex-wrap sm:flex-nowrap items-center gap-2">
           <select id="selectRasterFormat" class="w-full sm:w-auto flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white">
-            <option value="geotiff">GeoTIFF Float32 (.tif) — Padrão QGIS/ArcGIS</option>
-            <option value="asc">ESRI ASCII Grid (.asc) — Matriz Textual MDE</option>
-            <option value="xyz">XYZ / CSV Georreferenciado (.xyz) — Nuvem de Pontos 2m</option>
-            <option value="bil">ENVI Binary Float Grid (.bil) — Matriz Binária</option>
+            <option value="geotiff">GeoTIFF Float32 (.tif) — QGIS / ArcGIS</option>
+            <option value="asc">ESRI ASCII Grid (.asc) — Matriz MDE</option>
+            <option value="xyz">XYZ / CSV (.xyz) — Pontos 2m</option>
+            <option value="bil">ENVI Binary (.bil) — Float32</option>
           </select>
           <button id="btnExportGeoTIFF" class="w-full sm:w-auto py-2 px-3.5 rounded-lg text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center gap-1.5 transition whitespace-nowrap">
             <i data-lucide="download" class="w-4 h-4"></i>
-            <span data-i18n="btnExportRaster">Baixar Raster Selecionado</span>
+            <span data-i18n="btnExportRaster">Baixar Raster</span>
           </button>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <button id="btnExportPNGReport" class="py-2 px-3 rounded-lg text-xs font-semibold bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 flex items-center justify-center gap-1.5 transition">
-            <i data-lucide="camera" class="w-4 h-4"></i>
-            <span data-i18n="btnExportScreenPng">Exportar PNG da Tela + Legenda</span>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btnExportPNGReport" class="py-2 px-2.5 rounded-lg text-xs font-semibold bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 flex items-center justify-center gap-1.5 transition">
+            <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+            <span data-i18n="btnExportScreenPng">PNG da Tela + Legenda</span>
           </button>
 
-          <button id="btnExportGeoJSON" class="py-2 px-3 rounded-lg text-xs font-semibold bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 flex items-center justify-center gap-1.5 transition">
-            <i data-lucide="route" class="w-4 h-4"></i>
-            <span data-i18n="btnExportGeojson">Grafo Tobler Smart15 (.geojson)</span>
+          <button id="btnExportGeoJSON" class="py-2 px-2.5 rounded-lg text-xs font-semibold bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 flex items-center justify-center gap-1.5 transition">
+            <i data-lucide="route" class="w-3.5 h-3.5"></i>
+            <span data-i18n="btnExportGeojson">Grafo Tobler (.geojson)</span>
           </button>
         </div>
 
         <div id="exportToast" class="hidden text-xs mono p-2 rounded-lg bg-emerald-950/90 border border-emerald-500/40 text-emerald-200"></div>
-      </div>
 
-      <!-- 5. PROCESSING LOG CONSOLE (AT THE RIGHT PANEL) -->
-      <div class="glass-panel rounded-xl p-3.5 space-y-2">
-        <div class="flex items-center justify-between">
-          <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-            <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i>
-            <span data-i18n="sec4Title">4. Log de Processamento em Tempo Real</span>
-          </h2>
-          <button id="btnClearLog" class="text-[11px] text-slate-400 hover:text-white px-2 py-0.5 rounded bg-slate-800 border border-slate-700 transition">
-            <span data-i18n="btnClearLog">Limpar Log</span>
-          </button>
-        </div>
-        <div id="processingLogBox" class="mono text-[11px] bg-slate-950 border border-slate-800 rounded-lg p-2.5 h-36 overflow-y-auto custom-scroll space-y-1 text-slate-300"></div>
+        <!-- Collapsible Processing Log Console -->
+        <details class="pt-1">
+          <summary class="cursor-pointer text-[11px] font-medium text-slate-400 hover:text-slate-200 flex items-center justify-between select-none">
+            <span class="flex items-center gap-1.5"><i data-lucide="terminal" class="w-3.5 h-3.5 text-emerald-400"></i> <span data-i18n="sec4Title">Log de Processamento</span></span>
+            <button id="btnClearLog" type="button" class="text-[10px] text-slate-400 hover:text-white px-1.5 py-0.5 rounded bg-slate-800">
+              <span data-i18n="btnClearLog">Limpar</span>
+            </button>
+          </summary>
+          <div id="processingLogBox" class="mt-2 mono text-[11px] bg-slate-950 border border-slate-800 rounded-lg p-2 h-24 overflow-y-auto custom-scroll space-y-1 text-slate-300"></div>
+        </details>
       </div>
 
     </aside>
   </main>
 
   <!-- ======================================================================== -->
-  <!-- MODAL 1: SCIENTIFIC METHODOLOGY (BILINGUAL PT-BR / EN)                   -->
+  <!-- MODAL 1: SCIENTIFIC METHODOLOGY                                          -->
   <!-- ======================================================================== -->
   <div id="modalMethodology" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-      <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
-        <h3 class="text-base font-bold text-white flex items-center gap-2">
-          <i data-lucide="book-open" class="w-5 h-5 text-sky-400"></i>
-          <span data-i18n="methModalTitle">Metodologia Científica — Downscaling MDE 30m &rarr; 2m (TSharp-DEM)</span>
-        </h3>
-        <button id="btnCloseMethodology" class="p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-      <div id="methodologyBody" class="p-5 overflow-y-auto custom-scroll text-xs text-slate-300 space-y-4 leading-relaxed">
-        <!-- Populated dynamically according to active language (PT-BR / EN) -->
-      </div>
-    </div>
-  </div>
-
-  <!-- ======================================================================== -->
-  <!-- MODAL 2: QUICK TUTORIAL (BILINGUAL PT-BR / EN)                           -->
-  <!-- ======================================================================== -->
-  <div id="modalTutorial" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
       <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
-        <h3 class="text-base font-bold text-white flex items-center gap-2">
-          <i data-lucide="compass" class="w-5 h-5 text-emerald-400"></i>
-          <span data-i18n="tutModalTitle">Tutorial Rápido — Como Usar o TSharp-DEM 2m</span>
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="book-open" class="w-4 h-4 text-sky-400"></i>
+          <span data-i18n="methModalTitle">Metodologia Científica — Downscaling MDE 30m &rarr; 2m</span>
         </h3>
-        <button id="btnCloseTutorial" class="p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white">
-          <i data-lucide="x" class="w-5 h-5"></i>
+        <button id="btnCloseMethodology" class="p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
-      <div id="tutorialBody" class="p-5 overflow-y-auto custom-scroll text-xs text-slate-300 space-y-3 leading-relaxed">
-        <!-- Populated dynamically according to active language (PT-BR / EN) -->
-      </div>
+      <div id="methodologyBody" class="p-5 overflow-y-auto custom-scroll text-xs text-slate-300 space-y-3 leading-relaxed"></div>
     </div>
   </div>
 
+  <!-- ======================================================================== -->
+  <!-- MODAL 2: AUTO-OPENING SHORT WELCOME TUTORIAL POPUP                       -->
+  <!-- ======================================================================== -->
+  <div id="modalTutorial" class="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-sky-500/40 rounded-2xl max-w-lg w-full flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500 to-emerald-500 flex items-center justify-center text-slate-950 font-bold">
+            <i data-lucide="compass" class="w-4 h-4"></i>
+          </div>
+          <h3 class="text-sm font-bold text-white" data-i18n="tutModalTitle">Bem-vindo ao TSharp-DEM 2m — Guia Rápido</h3>
+        </div>
+        <button id="btnCloseTutorial" class="p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div id="tutorialBody" class="p-5 text-xs text-slate-200 space-y-3 leading-relaxed"></div>
+      <div class="px-5 py-3 bg-slate-950/80 border-t border-slate-800 flex items-center justify-between">
+        <span class="text-[11px] text-slate-400" data-i18n="tutFooterNote">O mapa inicia 100% limpo. Siga os Passos 1 a 4 à direita.</span>
+        <button id="btnStartNowTutorial" class="px-4 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-950 hover:opacity-95 transition" data-i18n="btnStartNow">
+          Começar Agora
+        </button>
+      </div>
+    </div>
+  </div>
   <script>
     // ============================================================================
     // BILINGUAL DICTIONARY (PT-BR & EN)
@@ -845,7 +823,18 @@ git push -u origin main</pre>
         btnExportScreenPng: 'Exportar PNG da Tela + Legenda',
         btnExportGeojson: 'Grafo Tobler Smart15 (.geojson)',
         sec4Title: '4. Log de Processamento em Tempo Real',
-        btnClearLog: 'Limpar Log',
+        btnClearLog: 'Limpar',
+        btnClearMap: 'Limpar Mapa',
+        mapCleanTitle: 'Mapa Limpo — Selecione ou desenhe uma área no Passo 1',
+        lblPresetOr: 'Ou carregar área exemplo:',
+        lblAdvSettings: 'Ajustes Avançados de IA, Suavização e Sol (Opcional)',
+        secOptTitle: 'Passo 3: Análises Opcionais (Clique para Ativar)',
+        optProfile: 'Perfil Topográfico',
+        optD8: 'Drenagem D8 & Bacia',
+        optContours: 'Curvas de Nível',
+        optEmbrapa: 'Relevo EMBRAPA',
+        tutFooterNote: 'O mapa inicia 100% limpo. Siga os Passos 1 a 4 à direita.',
+        btnStartNow: 'Começar Agora',
         methModalTitle: 'Metodologia Científica — Downscaling MDE 30m → 2m (TSharp-DEM)',
         tutModalTitle: 'Tutorial Rápido — Como Usar o TSharp-DEM 2m',
         methodologyHTML: `
@@ -870,15 +859,25 @@ git push -u origin main</pre>
           </div>
         `,
         tutorialHTML: `
-          <ol class="list-decimal pl-5 space-y-2.5">
-            <li><strong>Defina sua Área de Interesse (AOI):</strong> Use o botão <span class="text-emerald-300 font-semibold">Desenhar AOI</span> para clicar dois cantos diretamente no mapa, ou faça upload de um arquivo <span class="text-sky-300 font-semibold">.kml, .geojson ou .shp</span> no painel direito.</li>
-            <li><strong>Escolha o Mapa Base e Modo 2D/3D:</strong> Alterne entre <em>Esri Imagery</em> e <em>Mapa Base OSM</em> no topo do mapa, ou ative o botão <span class="text-sky-300 font-semibold">Vista 3D: ON</span> para inspecionar o modelo tridimensional interativo com exagero vertical.</li>
-            <li><strong>Selecione a Variável, Unidade e Paleta:</strong> No painel direito, escolha entre <strong>Altitude, Declividade, Direção (Aspect) ou Insolação</strong>, mude instantaneamente entre <strong>Metros (m) / Pés (ft)</strong> e <strong>Graus (°) / Porcentagem (%)</strong>, e selecione uma das 7 paletas científicas.</li>
-            <li><strong>Trace o Perfil Topográfico:</strong> Clique em <span class="text-amber-300 font-semibold">Traçar Perfil A-B</span> e clique em dois pontos no mapa para gerar a seção transversal comparando o MDE de 30 m com o MDT de 2 m. Use o botão <em>Exportar Perfil (PNG)</em> para salvar o gráfico.</li>
-            <li><strong>Exporte de Acordo com a Seleção:</strong> O botão <span class="text-emerald-300 font-semibold">Baixar Raster Selecionado</span> exporta exatamente a variável e unidade ativas em formato <strong>GeoTIFF Float32 (.tif), ESRI ASCII Grid (.asc), XYZ (.xyz) ou ENVI (.bil)</strong>, além da captura completa da tela com legenda e paleta em PNG.</li>
-          </ol>
-        `
-      },
+          <div class="space-y-2.5">
+            <div class="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-800/70 border border-slate-700/80">
+              <span class="w-5 h-5 rounded-full bg-sky-500 text-slate-950 font-bold flex items-center justify-center shrink-0">1</span>
+              <div><strong>Selecione a Área (Passo 1):</strong> Desenhe um retângulo direto no mapa, importe seu arquivo (<code>.kml</code>, <code>.geojson</code>, <code>.shp</code>) ou escolha uma área exemplo.</div>
+            </div>
+            <div class="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-800/70 border border-slate-700/80">
+              <span class="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 font-bold flex items-center justify-center shrink-0">2</span>
+              <div><strong>Gere o MDT 2m Suavizado (Passo 2):</strong> Clique em <em>Executar Super-Resolução</em>. Escolha entre Altitude, Declividade, Direção ou Insolação, unidades (<code>m/ft</code>, <code>°/%</code>) e Vista 2D/3D.</div>
+            </div>
+            <div class="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-800/70 border border-slate-700/80">
+              <span class="w-5 h-5 rounded-full bg-purple-400 text-slate-950 font-bold flex items-center justify-center shrink-0">3</span>
+              <div><strong>Análises Opcionais (Passo 3):</strong> Ative sob demanda apenas o que precisar: <em>Perfil Topográfico</em>, <em>Drenagem D8 &amp; Bacia por Exutório</em>, <em>Curvas de Nível</em> ou <em>Tabela EMBRAPA</em>.</div>
+            </div>
+            <div class="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-800/70 border border-slate-700/80">
+              <span class="w-5 h-5 rounded-full bg-amber-400 text-slate-950 font-bold flex items-center justify-center shrink-0">4</span>
+              <div><strong>Exporte (Passo 4):</strong> Baixe o raster em <strong>GeoTIFF (.tif)</strong>, <strong>ASC</strong>, <strong>Shapefile (.zip)</strong> ou a captura <strong>PNG com legenda</strong>.</div>
+            </div>
+          </div>
+        `      },
       en: {
         appSubtitle: 'Guided Topographic Downscaling (30m → 2m) | Elevation, Slope, Aspect & Solar Insolation',
         tabMap: 'Map',
@@ -950,7 +949,18 @@ git push -u origin main</pre>
         btnExportScreenPng: 'Export Screen + Legend PNG',
         btnExportGeojson: 'Smart15 Tobler Graph (.geojson)',
         sec4Title: '4. Real-Time Processing Log',
-        btnClearLog: 'Clear Log',
+        btnClearLog: 'Clear',
+        btnClearMap: 'Clear Map',
+        mapCleanTitle: 'Clean Map — Select or draw an area in Step 1',
+        lblPresetOr: 'Or load sample area:',
+        lblAdvSettings: 'Advanced AI, Smoothing & Solar Settings (Optional)',
+        secOptTitle: 'Step 3: Optional Analyses (Click to Enable)',
+        optProfile: 'Topographic Profile',
+        optD8: 'D8 Drainage & Basin',
+        optContours: 'Contour Lines',
+        optEmbrapa: 'EMBRAPA Relief',
+        tutFooterNote: 'The map starts 100% clean. Follow Steps 1 to 4 on the right.',
+        btnStartNow: 'Get Started',
         methModalTitle: 'Scientific Methodology — 30m → 2m DEM Downscaling (TSharp-DEM)',
         tutModalTitle: 'Quick Tutorial — How to Use TSharp-DEM 2m',
         methodologyHTML: `
@@ -1094,14 +1104,17 @@ git push -u origin main</pre>
       opticalAlpha: 1.25,
       sunAzimuth: 315,
       sunAltitude: 45,
+      hasProcessed: false,
       osmGrading: true,
-      showVectors: true,
-      showD8Network: true,
-      d8Threshold: 55,
+      showVectors: false,
+      showD8Network: false,
+      showWatershed: false,
+      showProfileLine: false,
+      d8Threshold: 65,
       d8ExtractedSegments: [],
       d8ReceiverGrid: null,
       contourIntervalM: 2.0,
-      showContours: true,
+      showContours: false,
       extractedContours: [],
       embrapaStats: [],
       pourPointNorm: [0.50, 0.78],
@@ -1503,6 +1516,27 @@ git push -u origin main</pre>
         }
       }
 
+      // Apply Multi-Pass Gaussian Spatial Smoothing on 2m DTM to eliminate blocky artifacts
+      const smoothBuf = new Float32Array(N * N);
+      for (let pass = 0; pass < 3; pass++) {
+        for (let y = 0; y < N; y++) {
+          for (let x = 0; x < N; x++) {
+            let acc = 0, wSum = 0;
+            for (let dy = -2; dy <= 2; dy++) {
+              const sy = Math.min(N - 1, Math.max(0, y + dy));
+              for (let dx = -2; dx <= 2; dx++) {
+                const sx = Math.min(N - 1, Math.max(0, x + dx));
+                const w = Math.exp(-(dx * dx + dy * dy) / 2.2);
+                acc += dtm2m[sy * N + sx] * w;
+                wSum += w;
+              }
+            }
+            smoothBuf[y * N + x] = acc / wSum;
+          }
+        }
+        dtm2m.set(smoothBuf);
+      }
+
       // Compute Slope (deg & %), Aspect (0-360°), Solar Insolation (Wh/m²), and Tobler (km/h)
       let sumSlope2mDeg = 0;
       let sumSlope30mDeg = 0;
@@ -1771,9 +1805,26 @@ git push -u origin main</pre>
             }
           }
         }
-        lines.push(line);
+        lines.push(smoothChaikinCurve(line, 2));
       }
       return lines;
+    }
+
+    function smoothChaikinCurve(pts, iterations = 2) {
+      let curr = pts;
+      for (let it = 0; it < iterations; it++) {
+        if (curr.length < 3) break;
+        const next = [curr[0]];
+        for (let i = 0; i < curr.length - 1; i++) {
+          const p0 = curr[i];
+          const p1 = curr[i + 1];
+          next.push([0.75 * p0[0] + 0.25 * p1[0], 0.75 * p0[1] + 0.25 * p1[1]]);
+          next.push([0.25 * p0[0] + 0.75 * p1[0], 0.25 * p0[1] + 0.75 * p1[1]]);
+        }
+        next.push(curr[curr.length - 1]);
+        curr = next;
+      }
+      return curr;
     }
 
     // ============================================================================
@@ -2125,26 +2176,40 @@ git push -u origin main</pre>
 
     function generateOverlayDataURL() {
       const N = state.gridSize;
-      const canvas = document.createElement('canvas');
-      canvas.width = N;
-      canvas.height = N;
-      const ctx = canvas.getContext('2d');
-      const imgData = ctx.createImageData(N, N);
+      const rawCanvas = document.createElement('canvas');
+      rawCanvas.width = N;
+      rawCanvas.height = N;
+      const rCtx = rawCanvas.getContext('2d');
+      const imgData = rCtx.createImageData(N, N);
       const data = imgData.data;
 
       const { array, minVal, maxVal } = getActiveLayerArrayAndRange();
       const applyShade = state.renderLayer !== 'dsm30m';
 
-      for (let i = 0; i < N * N; i++) {
-        const [r, g, b] = getPixelRGB(i, array, minVal, maxVal, applyShade);
-        const p = i * 4;
-        data[p] = r;
-        data[p + 1] = g;
-        data[p + 2] = b;
-        data[p + 3] = 255;
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          const i = y * N + x;
+          const [r, g, b] = getPixelRGB(i, array, minVal, maxVal, applyShade);
+          const edgeDist = Math.min(x, y, N - 1 - x, N - 1 - y);
+          const alpha = edgeDist < 4 ? Math.round(((edgeDist + 1) / 5.0) * 255) : 255;
+          const p = i * 4;
+          data[p] = r;
+          data[p + 1] = g;
+          data[p + 2] = b;
+          data[p + 3] = alpha;
+        }
       }
-      ctx.putImageData(imgData, 0, 0);
-      return canvas.toDataURL('image/png');
+      rCtx.putImageData(imgData, 0, 0);
+
+      // Upsample 3x with high-quality bicubic/bilinear browser smoothing (360x360)
+      const hiCanvas = document.createElement('canvas');
+      hiCanvas.width = N * 3;
+      hiCanvas.height = N * 3;
+      const hCtx = hiCanvas.getContext('2d');
+      hCtx.imageSmoothingEnabled = true;
+      hCtx.imageSmoothingQuality = 'high';
+      hCtx.drawImage(rawCanvas, 0, 0, hiCanvas.width, hiCanvas.height);
+      return hiCanvas.toDataURL('image/png');
     }
 
     // ============================================================================
@@ -2213,6 +2278,8 @@ git push -u origin main</pre>
           document.getElementById('labelDrawAOI').textContent = I18N[state.lang].btnDrawAOI;
           document.getElementById('uploadedFileName').textContent =
             `BBox Desenhada (${sLat.toFixed(3)}, ${wLon.toFixed(3)})`;
+          state.hasProcessed = true;
+          document.getElementById('statusDot').className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
           appendLog(`Nova AOI desenhada em tela e super-resolvida para 2m!`, 'ok');
           computeSuperResolutionPipeline();
         }
@@ -2224,6 +2291,8 @@ git push -u origin main</pre>
         const nx = Math.min(0.96, Math.max(0.04, (latlng.lng - wLon) / (eLon - wLon)));
         const ny = Math.min(0.96, Math.max(0.04, 1.0 - (latlng.lat - sLat) / (nLat - sLat)));
         state.pourPointNorm = [nx, ny];
+        state.showWatershed = true;
+        state.hasProcessed = true;
         state.interactionMode = null;
         document.getElementById('labelPickPourPoint').textContent = I18N[state.lang].btnPickOutlet;
         delineateWatershedFromPourPoint(state.gridSize);
@@ -2301,19 +2370,25 @@ git push -u origin main</pre>
 
     function renderMapOverlays() {
       if (!mapInstance) return;
+      if (rasterImageOverlay) {
+        mapInstance.removeLayer(rasterImageOverlay);
+        rasterImageOverlay = null;
+      }
+      vectorLayerGroup.clearLayers();
+
+      // Keep the map 100% clean until the user clicks "Executar Super-Resolução" or draws/uploads an AOI
+      if (!state.hasProcessed) {
+        return;
+      }
+
       const aoi = PRESET_AOIS[state.currentAoiKey];
       const bounds = getActiveBounds();
       const dataUrl = generateOverlayDataURL();
 
-      if (rasterImageOverlay) {
-        mapInstance.removeLayer(rasterImageOverlay);
-      }
       rasterImageOverlay = L.imageOverlay(dataUrl, bounds, {
         opacity: state.opacity,
         interactive: false
       }).addTo(mapInstance);
-
-      vectorLayerGroup.clearLayers();
 
       // Draw AOI Bounding Box or Uploaded Polygon
       if (state.customPolygonLatLngs && state.customPolygonLatLngs.length >= 3) {
@@ -2371,8 +2446,8 @@ git push -u origin main</pre>
         }
       }
 
-      // Render Delineated Watershed Polygon & Snapped Pour Point (Exutório)
-      if (state.watershedBoundaryNorm && state.watershedBoundaryNorm.length >= 3) {
+      // Render Delineated Watershed Polygon & Snapped Pour Point (only when user requests watershed delineation)
+      if (state.showWatershed && state.watershedBoundaryNorm && state.watershedBoundaryNorm.length >= 3) {
         const wsLatLngs = state.watershedBoundaryNorm.map(([nx, ny]) => [
           nLat - ny * (nLat - sLat),
           wLon + nx * (eLon - wLon)
@@ -2425,7 +2500,8 @@ git push -u origin main</pre>
         }
       }
 
-      // Transect Line A -> B
+      // Transect Line A -> B (only shown when Profile tool is active)
+      if (!state.showProfileLine) return;
       const [[nxA, nyA], [nxB, nyB]] = getTransectEndpointsNormalized();
       const ptA = [nLat - nyA * (nLat - sLat), wLon + nxA * (eLon - wLon)];
       const ptB = [nLat - nyB * (nLat - sLat), wLon + nxB * (eLon - wLon)];
@@ -2681,6 +2757,8 @@ git push -u origin main</pre>
       if (mapInstance) {
         mapInstance.fitBounds(state.customBounds, { padding: [24, 24] });
       }
+      state.hasProcessed = true;
+      document.getElementById('statusDot').className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
       appendLog(`Polígono '${filename}' importado (${latlngs.length} vértices). Super-Resolução 2m recalculada!`, 'ok');
       computeSuperResolutionPipeline();
     }
@@ -4038,9 +4116,91 @@ git push -u origin main</pre>
 
       // Layer, Palette & SR Controls
       document.getElementById('btnRunSR').addEventListener('click', () => {
+        state.hasProcessed = true;
+        document.getElementById('statusDot').className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
         computeSuperResolutionPipeline();
-        appendLog(`Super-Resolução 2m executada (${state.srMethod}) em ${state.stats.latencyMs} ms.`, 'ok');
-        showToast('Super-Resolução 2m recalculada com sucesso!');
+        appendLog(`Super-Resolução 2m suavizada executada (${state.srMethod}) em ${state.stats.latencyMs} ms.`, 'ok');
+        showToast('MDT 2m Suavizado gerado sobre a área selecionada!');
+      });
+
+      // Clear Map / Reset Button
+      document.getElementById('btnClearMap').addEventListener('click', () => {
+        state.hasProcessed = false;
+        state.showVectors = false;
+        state.showD8Network = false;
+        state.showContours = false;
+        state.showWatershed = false;
+        state.showProfileLine = false;
+        document.getElementById('chkShowVectors').checked = false;
+        document.getElementById('chkShowD8Network').checked = false;
+        document.getElementById('chkShowContours').checked = false;
+        document.getElementById('profileDrawerCard').classList.add('hidden');
+        document.getElementById('optPanelD8').classList.add('hidden');
+        document.getElementById('optPanelContours').classList.add('hidden');
+        document.getElementById('optPanelEmbrapa').classList.add('hidden');
+        document.getElementById('badgeOptProfile').textContent = 'OFF';
+        document.getElementById('badgeOptD8').textContent = 'OFF';
+        document.getElementById('badgeOptContours').textContent = 'OFF';
+        document.getElementById('statusDot').className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
+        document.getElementById('mapHeaderTitle').textContent = 'Mapa Limpo — Selecione ou desenhe uma área no Passo 1';
+        renderMapOverlays();
+        appendLog('Mapa limpo. Pronto para nova seleção de área.', 'info');
+      });
+
+      // Welcome Tutorial "Começar Agora" button
+      document.getElementById('btnStartNowTutorial').addEventListener('click', () => {
+        document.getElementById('modalTutorial').classList.add('hidden');
+      });
+
+      // Step 3 Optional Tool Pills (Profile, D8, Contours, EMBRAPA)
+      document.getElementById('btnOptTabProfile').addEventListener('click', () => {
+        const card = document.getElementById('profileDrawerCard');
+        const isHidden = card.classList.contains('hidden');
+        card.classList.toggle('hidden', !isHidden);
+        state.showProfileLine = isHidden;
+        document.getElementById('badgeOptProfile').textContent = isHidden ? 'ON' : 'OFF';
+        document.getElementById('badgeOptProfile').className = isHidden ? 'text-[10px] mono text-emerald-400 font-bold' : 'text-[10px] mono text-slate-400';
+        if (isHidden && !state.hasProcessed) {
+          state.hasProcessed = true;
+          computeSuperResolutionPipeline();
+        }
+        renderMapOverlays();
+        renderTransectChart();
+      });
+
+      document.getElementById('btnOptTabD8').addEventListener('click', () => {
+        const panel = document.getElementById('optPanelD8');
+        const isHidden = panel.classList.contains('hidden');
+        panel.classList.toggle('hidden', !isHidden);
+        state.showD8Network = isHidden;
+        document.getElementById('chkShowD8Network').checked = isHidden;
+        document.getElementById('badgeOptD8').textContent = isHidden ? 'ON' : 'OFF';
+        document.getElementById('badgeOptD8').className = isHidden ? 'text-[10px] mono text-cyan-300 font-bold' : 'text-[10px] mono text-slate-400';
+        if (isHidden && !state.hasProcessed) {
+          state.hasProcessed = true;
+          computeSuperResolutionPipeline();
+        }
+        renderMapOverlays();
+      });
+
+      document.getElementById('btnOptTabContours').addEventListener('click', () => {
+        const panel = document.getElementById('optPanelContours');
+        const isHidden = panel.classList.contains('hidden');
+        panel.classList.toggle('hidden', !isHidden);
+        state.showContours = isHidden;
+        document.getElementById('chkShowContours').checked = isHidden;
+        document.getElementById('badgeOptContours').textContent = isHidden ? 'ON' : 'OFF';
+        document.getElementById('badgeOptContours').className = isHidden ? 'text-[10px] mono text-amber-300 font-bold' : 'text-[10px] mono text-slate-400';
+        if (isHidden && !state.hasProcessed) {
+          state.hasProcessed = true;
+          computeSuperResolutionPipeline();
+        }
+        renderMapOverlays();
+      });
+
+      document.getElementById('btnOptTabEmbrapa').addEventListener('click', () => {
+        const panel = document.getElementById('optPanelEmbrapa');
+        panel.classList.toggle('hidden');
       });
 
       document.getElementById('selectRenderLayer').addEventListener('change', (e) => {
