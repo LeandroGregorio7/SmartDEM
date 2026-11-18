@@ -316,7 +316,7 @@ git push -u origin main</pre>
       <div class="glass-panel rounded-xl p-4 space-y-3">
         <div class="flex items-center justify-between">
           <h2 class="text-xs font-semibold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
-            <i data-lucide="scan-Search" class="w-4 h-4"></i>
+            <i data-lucide="scan-search" class="w-4 h-4"></i>
             <span data-i18n="sec1Title">1. Seleção de Área (Desenho ou Upload KML / GeoJSON / SHP)</span>
           </h2>
           <span id="readoutDemSource" class="text-[11px] mono text-slate-400">COP-DEM 30m / ANADEM</span>
@@ -366,7 +366,7 @@ git push -u origin main</pre>
       <!-- 2. VISUALIZATION VARIABLE, UNITS (m/ft, %/deg), PALETTE & PARAMETERS -->
       <div class="glass-panel rounded-xl p-4 space-y-3">
         <h2 class="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-          <i data-lucide="Sliders" class="w-4 h-4"></i>
+          <i data-lucide="sliders" class="w-4 h-4"></i>
           <span data-i18n="sec2Title">2. Variável Topográfica, Unidades &amp; Paleta de Cores</span>
         </h2>
 
@@ -605,7 +605,7 @@ git push -u origin main</pre>
       <div class="glass-panel rounded-xl p-4 space-y-2.5 border border-amber-500/25">
         <div class="flex items-center justify-between">
           <h2 class="text-xs font-semibold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
-            <i data-lucide="Splines" class="w-4 h-4"></i>
+            <i data-lucide="spline" class="w-4 h-4"></i>
             <span data-i18n="secContoursTitle">Curvas de Nível Equidistantes (MDT 2m)</span>
           </h2>
           <span id="contourCountBadge" class="text-[10px] mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
@@ -2788,6 +2788,7 @@ git push -u origin main</pre>
       }
 
       const slpSymbol = state.slopeUnit === 'pct' ? '%' : '°';
+      if (typeof Chart === 'undefined') return;
       const ctx = document.getElementById('transectChartCanvas').getContext('2d');
 
       if (transectChart) {
@@ -2919,6 +2920,7 @@ git push -u origin main</pre>
     // UI SYNCHRONIZATION
     // ============================================================================
     function updateAllVisuals() {
+      if (!state.grids || !state.grids.dtm2m) return;
       const aoi = PRESET_AOIS[state.currentAoiKey];
       document.getElementById('mapHeaderTitle').textContent =
         state.customBounds ? `AOI Customizada (${aoi.name})` : `AOI: ${aoi.name}`;
@@ -3875,14 +3877,33 @@ git push -u origin main</pre>
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      if (window.lucide) {
-        window.lucide.createIcons();
+      try {
+        if (window.lucide) {
+          window.lucide.createIcons();
+        }
+      } catch (e) {
+        console.warn('Lucide init skipped:', e);
       }
-      initMap();
-      applyLanguage('pt');
-      computeSuperResolutionPipeline();
-      mapInstance.fitBounds(PRESET_AOIS.samambaia.bounds, { padding: [20, 20] });
-      appendLog('TSharp-DEM 2m inicializado. Ingestão Cloud COG + Guia Óptico Esri + OSM prontos.', 'ok');
+
+      try {
+        if (typeof L !== 'undefined') {
+          initMap();
+        }
+      } catch (e) {
+        console.warn('Leaflet init error:', e);
+      }
+
+      try {
+        computeSuperResolutionPipeline();
+        applyLanguage('pt');
+        if (mapInstance) {
+          mapInstance.fitBounds(PRESET_AOIS.samambaia.bounds, { padding: [20, 20] });
+        }
+        appendLog('TSharp-DEM 2m inicializado. Ingestão Cloud COG + Guia Óptico Esri + OSM prontos.', 'ok');
+      } catch (e) {
+        console.error('Pipeline init error:', e);
+        appendLog('Aviso na inicialização: ' + e.message, 'warn');
+      }
 
       // Preset AOI & Draw AOI
       document.getElementById('btnPresetSamambaia').addEventListener('click', () => switchPresetAOI('samambaia'));
