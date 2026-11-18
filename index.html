@@ -63,6 +63,9 @@
     .custom-scroll::-webkit-scrollbar-track {
       background: #0f172a;
     }
+    .drawing-pencil-cursor, .drawing-pencil-cursor .leaflet-grab, .drawing-pencil-cursor .leaflet-interactive {
+      cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z' fill='%230f172a'/%3E%3Cpath d='m15 5 4 4'/%3E%3C/svg%3E") 2 22, crosshair !important;
+    }
     .custom-scroll::-webkit-scrollbar-thumb {
       background: #334155;
       border-radius: 3px;
@@ -175,6 +178,46 @@
             </button>
             <button id="btnCenterAOI" class="px-2 py-1 rounded bg-slate-800 text-slate-300 hover:text-white border border-slate-700 flex items-center gap-1" title="Centralizar na AOI">
               <i data-lucide="locate-fixed" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Interactive Drawing Sub-Toolbar (Opened by clicking "Desenhar Área") -->
+        <div id="drawSubBar" class="hidden px-3.5 py-2 bg-slate-950/95 border-b border-sky-500/40 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="text-[11px] font-semibold text-sky-300 flex items-center gap-1 mr-1">
+              <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+              <span data-i18n="drawToolPrompt">Escolha a forma e arraste no mapa:</span>
+            </span>
+
+            <button id="btnShapeRect" class="px-2.5 py-1 rounded-md font-medium bg-sky-500 text-slate-950 flex items-center gap-1 transition">
+              <i data-lucide="rectangle-horizontal" class="w-3.5 h-3.5"></i>
+              <span data-i18n="shapeRect">Retângulo</span>
+            </button>
+
+            <button id="btnShapeSquare" class="px-2.5 py-1 rounded-md font-medium bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700 flex items-center gap-1 transition">
+              <i data-lucide="square" class="w-3.5 h-3.5"></i>
+              <span data-i18n="shapeSquare">Quadrado</span>
+            </button>
+
+            <button id="btnShapeCircle" class="px-2.5 py-1 rounded-md font-medium bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700 flex items-center gap-1 transition">
+              <i data-lucide="circle" class="w-3.5 h-3.5"></i>
+              <span data-i18n="shapeCircle">Círculo</span>
+            </button>
+
+            <button id="btnShapePoly" class="px-2.5 py-1 rounded-md font-medium bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700 flex items-center gap-1 transition">
+              <i data-lucide="pentagon" class="w-3.5 h-3.5"></i>
+              <span data-i18n="shapePoly">Polígono</span>
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span id="drawLiveHint" class="mono text-[11px] text-emerald-300">Arraste no mapa para desenhar</span>
+            <button id="btnFinishPoly" class="hidden px-2.5 py-1 rounded bg-emerald-500 text-slate-950 font-bold text-[11px]">
+              <span data-i18n="btnFinishPoly">Concluir Polígono</span>
+            </button>
+            <button id="btnCancelDraw" class="px-2 py-1 rounded bg-slate-800 text-rose-300 hover:bg-slate-700 border border-slate-700 text-[11px]">
+              <span data-i18n="btnCancelDraw">Cancelar</span>
             </button>
           </div>
         </div>
@@ -835,6 +878,13 @@ git push origin main</pre>
         optEmbrapa: 'Relevo EMBRAPA',
         tutFooterNote: 'O mapa inicia 100% limpo. Siga os Passos 1 a 4 à direita.',
         btnStartNow: 'Começar Agora',
+        drawToolPrompt: 'Modo Lápis — escolha a forma:',
+        shapeRect: 'Retângulo',
+        shapeSquare: 'Quadrado',
+        shapeCircle: 'Círculo',
+        shapePoly: 'Polígono',
+        btnFinishPoly: 'Concluir Polígono',
+        btnCancelDraw: 'Cancelar',
         methModalTitle: 'Metodologia Científica — Downscaling MDE 30m → 2m (TSharp-DEM)',
         tutModalTitle: 'Tutorial Rápido — Como Usar o TSharp-DEM 2m',
         methodologyHTML: `
@@ -961,6 +1011,13 @@ git push origin main</pre>
         optEmbrapa: 'EMBRAPA Relief',
         tutFooterNote: 'The map starts 100% clean. Follow Steps 1 to 4 on the right.',
         btnStartNow: 'Get Started',
+        drawToolPrompt: 'Pencil Mode — pick a shape:',
+        shapeRect: 'Rectangle',
+        shapeSquare: 'Square',
+        shapeCircle: 'Circle',
+        shapePoly: 'Polygon',
+        btnFinishPoly: 'Finish Polygon',
+        btnCancelDraw: 'Cancel',
         methModalTitle: 'Scientific Methodology — 30m → 2m DEM Downscaling (TSharp-DEM)',
         tutModalTitle: 'Quick Tutorial — How to Use TSharp-DEM 2m',
         methodologyHTML: `
@@ -1125,8 +1182,11 @@ git push origin main</pre>
       dockOpen: true,
       transectAxis: 0,
       customTransectPoints: null, // [[nxA, nyA], [nxB, nyB]]
-      interactionMode: null,      // null | 'draw_aoi' | 'draw_profile'
+      interactionMode: null,      // null | 'draw_aoi' | 'draw_profile' | 'pick_outlet'
+      drawShape: 'rect',          // 'rect' | 'square' | 'circle' | 'poly'
+      isMouseDrawing: false,
       drawTempFirstLatLng: null,
+      drawPolyPoints: [],
       gridSize: 120,
       grids: {
         dsm30m: null,
@@ -2208,7 +2268,24 @@ git push origin main</pre>
       const hCtx = hiCanvas.getContext('2d');
       hCtx.imageSmoothingEnabled = true;
       hCtx.imageSmoothingQuality = 'high';
-      hCtx.drawImage(rawCanvas, 0, 0, hiCanvas.width, hiCanvas.height);
+
+      if (state.customPolygonLatLngs && state.customPolygonLatLngs.length >= 3) {
+        const [[sLat, wLon], [nLat, eLon]] = getActiveBounds();
+        hCtx.save();
+        hCtx.beginPath();
+        state.customPolygonLatLngs.forEach(([lat, lon], idx) => {
+          const px = ((lon - wLon) / Math.max(1e-7, eLon - wLon)) * hiCanvas.width;
+          const py = (1.0 - (lat - sLat) / Math.max(1e-7, nLat - sLat)) * hiCanvas.height;
+          if (idx === 0) hCtx.moveTo(px, py);
+          else hCtx.lineTo(px, py);
+        });
+        hCtx.closePath();
+        hCtx.clip();
+        hCtx.drawImage(rawCanvas, 0, 0, hiCanvas.width, hiCanvas.height);
+        hCtx.restore();
+      } else {
+        hCtx.drawImage(rawCanvas, 0, 0, hiCanvas.width, hiCanvas.height);
+      }
       return hiCanvas.toDataURL('image/png');
     }
 
@@ -2250,38 +2327,215 @@ git push origin main</pre>
 
       vectorLayerGroup = L.layerGroup().addTo(mapInstance);
 
+      mapInstance.on('mousedown', (e) => {
+        handleMapDrawMouseDown(e.latlng);
+      });
+
       mapInstance.on('mousemove', (e) => {
-        updateCursorReadout(e.latlng);
+        if (state.isMouseDrawing) {
+          handleMapDrawMouseMove(e.latlng);
+        } else if (state.interactionMode === 'draw_aoi' && state.drawShape === 'poly' && state.drawPolyPoints.length > 0) {
+          updatePolygonRubberBand(e.latlng);
+        } else {
+          updateCursorReadout(e.latlng);
+        }
+      });
+
+      mapInstance.on('mouseup', (e) => {
+        if (state.isMouseDrawing) {
+          handleMapDrawMouseUp(e.latlng);
+        }
       });
 
       mapInstance.on('click', (e) => {
         handleMapInteractiveClick(e.latlng);
       });
+
+      mapInstance.on('dblclick', (e) => {
+        if (state.interactionMode === 'draw_aoi' && state.drawShape === 'poly' && state.drawPolyPoints.length >= 3) {
+          L.DomEvent.stopPropagation(e);
+          finalizePolygonDraw();
+        }
+      });
+    }
+
+    let drawPreviewLayer = null;
+
+    function clearDrawPreview() {
+      if (drawPreviewLayer && mapInstance) {
+        mapInstance.removeLayer(drawPreviewLayer);
+        drawPreviewLayer = null;
+      }
+    }
+
+    function activateDrawMode(shape = 'rect') {
+      if (state.is3D) document.getElementById('btnToggle3D').click();
+      state.interactionMode = 'draw_aoi';
+      state.drawShape = shape;
+      state.isMouseDrawing = false;
+      state.drawTempFirstLatLng = null;
+      state.drawPolyPoints = [];
+      clearDrawPreview();
+
+      document.getElementById('drawSubBar').classList.remove('hidden');
+      document.getElementById('leafletMap').classList.add('drawing-pencil-cursor');
+
+      // Highlight active shape button
+      const mapBtns = {
+        rect: 'btnShapeRect',
+        square: 'btnShapeSquare',
+        circle: 'btnShapeCircle',
+        poly: 'btnShapePoly'
+      };
+      Object.entries(mapBtns).forEach(([key, id]) => {
+        document.getElementById(id).className =
+          key === shape
+            ? 'px-2.5 py-1 rounded-md font-medium bg-sky-500 text-slate-950 flex items-center gap-1 transition'
+            : 'px-2.5 py-1 rounded-md font-medium bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700 flex items-center gap-1 transition';
+      });
+
+      const finishBtn = document.getElementById('btnFinishPoly');
+      const hintEl = document.getElementById('drawLiveHint');
+      if (shape === 'poly') {
+        mapInstance.dragging.enable();
+        mapInstance.doubleClickZoom.disable();
+        finishBtn.classList.remove('hidden');
+        hintEl.textContent = state.lang === 'en' ? 'Click vertices, double-click or Finish' : 'Clique nos vértices e finalize';
+      } else {
+        // Disable map panning so dragging draws the shape directly!
+        mapInstance.dragging.disable();
+        finishBtn.classList.add('hidden');
+        hintEl.textContent = state.lang === 'en' ? 'Click & drag on map' : 'Clique e arraste no mapa';
+      }
+    }
+
+    function exitDrawMode() {
+      state.interactionMode = null;
+      state.isMouseDrawing = false;
+      state.drawTempFirstLatLng = null;
+      state.drawPolyPoints = [];
+      clearDrawPreview();
+      document.getElementById('drawSubBar').classList.add('hidden');
+      document.getElementById('leafletMap').classList.remove('drawing-pencil-cursor');
+      if (mapInstance) {
+        mapInstance.dragging.enable();
+        mapInstance.doubleClickZoom.enable();
+      }
+    }
+
+    function computeSquareBounds(startLL, endLL) {
+      const dLat = endLL.lat - startLL.lat;
+      const dLon = endLL.lng - startLL.lng;
+      const cosLat = Math.cos((startLL.lat * Math.PI) / 180.0);
+      const span = Math.max(Math.abs(dLat), Math.abs(dLon) * cosLat);
+      const lat2 = startLL.lat + (dLat >= 0 ? span : -span);
+      const lon2 = startLL.lng + (dLon >= 0 ? span / cosLat : -span / cosLat);
+      return [
+        [Math.min(startLL.lat, lat2), Math.min(startLL.lng, lon2)],
+        [Math.max(startLL.lat, lat2), Math.max(startLL.lng, lon2)]
+      ];
+    }
+
+    function handleMapDrawMouseDown(latlng) {
+      if (state.interactionMode !== 'draw_aoi' || state.drawShape === 'poly') return;
+      state.isMouseDrawing = true;
+      state.drawTempFirstLatLng = latlng;
+      clearDrawPreview();
+    }
+
+    function handleMapDrawMouseMove(latlng) {
+      if (!state.isMouseDrawing || !state.drawTempFirstLatLng) return;
+      const p1 = state.drawTempFirstLatLng;
+      clearDrawPreview();
+
+      if (state.drawShape === 'rect') {
+        const b = [[Math.min(p1.lat, latlng.lat), Math.min(p1.lng, latlng.lng)], [Math.max(p1.lat, latlng.lat), Math.max(p1.lng, latlng.lng)]];
+        drawPreviewLayer = L.rectangle(b, { color: '#38bdf8', weight: 2, fillColor: '#38bdf8', fillOpacity: 0.18, dashArray: '5, 3' }).addTo(mapInstance);
+      } else if (state.drawShape === 'square') {
+        const b = computeSquareBounds(p1, latlng);
+        drawPreviewLayer = L.rectangle(b, { color: '#38bdf8', weight: 2, fillColor: '#38bdf8', fillOpacity: 0.18, dashArray: '5, 3' }).addTo(mapInstance);
+      } else if (state.drawShape === 'circle') {
+        const radiusM = Math.max(40, mapInstance.distance(p1, latlng));
+        document.getElementById('drawLiveHint').textContent = `Raio: ${Math.round(radiusM)} m`;
+        drawPreviewLayer = L.circle(p1, { radius: radiusM, color: '#38bdf8', weight: 2, fillColor: '#38bdf8', fillOpacity: 0.18, dashArray: '5, 3' }).addTo(mapInstance);
+      }
+    }
+
+    function handleMapDrawMouseUp(latlng) {
+      if (!state.isMouseDrawing || !state.drawTempFirstLatLng) return;
+      const p1 = state.drawTempFirstLatLng;
+      state.isMouseDrawing = false;
+
+      // Ignore tiny accidental clicks
+      if (mapInstance.distance(p1, latlng) < 25) {
+        clearDrawPreview();
+        return;
+      }
+
+      let bounds;
+      let polyLatLngs = null;
+
+      if (state.drawShape === 'rect') {
+        bounds = [[Math.min(p1.lat, latlng.lat), Math.min(p1.lng, latlng.lng)], [Math.max(p1.lat, latlng.lat), Math.max(p1.lng, latlng.lng)]];
+      } else if (state.drawShape === 'square') {
+        bounds = computeSquareBounds(p1, latlng);
+      } else if (state.drawShape === 'circle') {
+        const radiusM = mapInstance.distance(p1, latlng);
+        const circleLayer = L.circle(p1, { radius: radiusM });
+        const bObj = circleLayer.getBounds();
+        // Approximate circle as 36-vertex polygon for mask overlay
+        const cosLat = Math.cos((p1.lat * Math.PI) / 180.0);
+        const dLat = radiusM / 111320.0;
+        const dLon = radiusM / (111320.0 * cosLat);
+        polyLatLngs = [];
+        for (let k = 0; k < 36; k++) {
+          const ang = (k / 36.0) * Math.PI * 2.0;
+          polyLatLngs.push([p1.lat + dLat * Math.sin(ang), p1.lng + dLon * Math.cos(ang)]);
+        }
+        bounds = [[p1.lat - dLat, p1.lng - dLon], [p1.lat + dLat, p1.lng + dLon]];
+      }
+
+      applyDrawnAOI(bounds, polyLatLngs);
+    }
+
+    function updatePolygonRubberBand(cursorLL) {
+      clearDrawPreview();
+      const pts = [...state.drawPolyPoints, cursorLL];
+      drawPreviewLayer = L.polyline(pts, { color: '#38bdf8', weight: 2, dashArray: '5, 3' }).addTo(mapInstance);
+    }
+
+    function finalizePolygonDraw() {
+      if (state.drawPolyPoints.length < 3) return;
+      let sLat = Infinity, nLat = -Infinity, wLon = Infinity, eLon = -Infinity;
+      const latlngs = state.drawPolyPoints.map((ll) => {
+        if (ll.lat < sLat) sLat = ll.lat;
+        if (ll.lat > nLat) nLat = ll.lat;
+        if (ll.lng < wLon) wLon = ll.lng;
+        if (ll.lng > eLon) eLon = ll.lng;
+        return [ll.lat, ll.lng];
+      });
+      applyDrawnAOI([[sLat, wLon], [nLat, eLon]], latlngs);
+    }
+
+    function applyDrawnAOI(bounds, polyLatLngs) {
+      state.customBounds = bounds;
+      state.customPolygonLatLngs = polyLatLngs;
+      state.hasProcessed = true;
+      exitDrawMode();
+
+      document.getElementById('statusDot').className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
+      document.getElementById('uploadedFileName').textContent =
+        `AOI Desenhada (${bounds[0][0].toFixed(3)}, ${bounds[0][1].toFixed(3)})`;
+      appendLog(`AOI (${state.drawShape.toUpperCase()}) desenhada em tela e super-resolvida para 2m!`, 'ok');
+      computeSuperResolutionPipeline();
     }
 
     function handleMapInteractiveClick(latlng) {
       if (state.interactionMode === 'draw_aoi') {
-        if (!state.drawTempFirstLatLng) {
-          state.drawTempFirstLatLng = latlng;
-          appendLog(` Canto 1 da AOI registrado (${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}). Clique no canto oposto.`, 'info');
-        } else {
-          const p1 = state.drawTempFirstLatLng;
-          const p2 = latlng;
-          const sLat = Math.min(p1.lat, p2.lat);
-          const nLat = Math.max(p1.lat, p2.lat);
-          const wLon = Math.min(p1.lng, p2.lng);
-          const eLon = Math.max(p1.lng, p2.lng);
-          state.customBounds = [[sLat, wLon], [nLat, eLon]];
-          state.customPolygonLatLngs = null;
-          state.drawTempFirstLatLng = null;
-          state.interactionMode = null;
-          document.getElementById('labelDrawAOI').textContent = I18N[state.lang].btnDrawAOI;
-          document.getElementById('uploadedFileName').textContent =
-            `BBox Desenhada (${sLat.toFixed(3)}, ${wLon.toFixed(3)})`;
-          state.hasProcessed = true;
-          document.getElementById('statusDot').className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
-          appendLog(`Nova AOI desenhada em tela e super-resolvida para 2m!`, 'ok');
-          computeSuperResolutionPipeline();
+        if (state.drawShape === 'poly') {
+          state.drawPolyPoints.push(latlng);
+          updatePolygonRubberBand(latlng);
+          document.getElementById('drawLiveHint').textContent = `${state.drawPolyPoints.length} vértices`;
         }
         return;
       }
@@ -3988,14 +4242,18 @@ git push origin main</pre>
       document.getElementById('btnPresetVicosa').addEventListener('click', () => switchPresetAOI('vicosa'));
 
       const startDrawAOI = () => {
-        if (state.is3D) document.getElementById('btnToggle3D').click();
-        state.interactionMode = 'draw_aoi';
-        state.drawTempFirstLatLng = null;
-        document.getElementById('labelDrawAOI').textContent = I18N[state.lang].btnDrawingAOI;
-        appendLog('Modo Desenho AOI ativo: clique no canto inicial e depois no canto final sobre o mapa.', 'warn');
+        activateDrawMode('rect');
+        appendLog('Modo Lápis ativado: escolha Retângulo, Quadrado, Círculo ou Polígono e arraste sobre o mapa.', 'info');
       };
       document.getElementById('btnDrawAOI').addEventListener('click', startDrawAOI);
       document.getElementById('btnDrawAOIRight').addEventListener('click', startDrawAOI);
+
+      document.getElementById('btnShapeRect').addEventListener('click', () => activateDrawMode('rect'));
+      document.getElementById('btnShapeSquare').addEventListener('click', () => activateDrawMode('square'));
+      document.getElementById('btnShapeCircle').addEventListener('click', () => activateDrawMode('circle'));
+      document.getElementById('btnShapePoly').addEventListener('click', () => activateDrawMode('poly'));
+      document.getElementById('btnFinishPoly').addEventListener('click', finalizePolygonDraw);
+      document.getElementById('btnCancelDraw').addEventListener('click', exitDrawMode);
 
       // Trace Topographic Profile A-B on Map
       document.getElementById('btnDrawProfile').addEventListener('click', () => {
