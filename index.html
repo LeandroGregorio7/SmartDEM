@@ -1301,6 +1301,7 @@ git push origin main</pre>
       drawTempFirstLatLng: null,
       drawPolyPoints: [],
       gridSize: 120,
+      cellSizeM: 2.0,
       grids: {
         dsm30m: null,
         dtm2m: null,
@@ -1582,14 +1583,19 @@ git push origin main</pre>
       state.realAoiWidthM = widthM;
       state.realAoiHeightM = heightM;
 
-      const targetCols = Math.min(160, Math.max(80, Math.round(widthM / 2.0)));
-      const targetRows = Math.min(160, Math.max(80, Math.round(heightM / 2.0)));
-      const N = Math.max(targetCols, targetRows);
+      const maxDimM = Math.max(widthM, heightM);
+      // True 2.0m/pixel grid up to 320x320 (640m x 640m). If AOI is larger, cap at 320x320 and track exact cellSizeM!
+      const N = Math.min(320, Math.max(80, Math.round(maxDimM / 2.0)));
       state.gridSize = N;
-      const effStepM = Math.max(widthM, heightM) / N;
+      state.cellSizeM = maxDimM / N;
 
-      appendLog(`[1/5] BBox métrica: ${Math.round(widthM)}m × ${Math.round(heightM)}m (${areaHa.toFixed(1)} ha) | Grade ${N}×${N} px (passo ~${effStepM.toFixed(2)}m).`, 'info');
-      document.getElementById('readoutGridDims').textContent = `${N}×${N} px (~${effStepM.toFixed(1)}m)`;
+      const isTrue2m = state.cellSizeM <= 2.25;
+      const resLabel = isTrue2m ? '2.00 m/px (Nativo)' : `${state.cellSizeM.toFixed(2)} m/px (Área > 640m)`;
+      appendLog(`[1/5] BBox métrica: ${Math.round(widthM)}m × ${Math.round(heightM)}m (${areaHa.toFixed(1)} ha) | Grade ${N}×${N} px | Resolução: ${resLabel}.`, isTrue2m ? 'ok' : 'warn');
+      if (!isTrue2m) {
+        appendLog(`[Aviso] Para manter processamento em 2.0m reais no navegador, desenhe áreas menores que 640m × 640m (~40 ha).`, 'warn');
+      }
+      document.getElementById('readoutGridDims').textContent = `${N}×${N} px (${state.cellSizeM.toFixed(2)}m/px)`;
 
       const demZoom = 13;
       const tMin = lonLatToTile(wLon, nLat, demZoom);
@@ -1702,11 +1708,26 @@ git push origin main</pre>
         const tsCtx = texSample.getContext('2d');
         tsCtx.drawImage(texCanvas, 0, 0, N, N);
         const pxData = tsCtx.getImageData(0, 0, N, N).data;
-        const edgeArr = new Float32Array(N * N);
+        const lumArr = new Float32Array(N * N);
         for (let i = 0; i < N * N; i++) {
           const p = i * 4;
-          const lum = (0.299 * pxData[p] + 0.587 * pxData[p + 1] + 0.114 * pxData[p + 2]) / 255.0;
-          edgeArr[i] = (lum - 0.5) * 2.0;
+          lumArr[i] = (0.299 * pxData[p] + 0.587 * pxData[p + 1] + 0.114 * pxData[p + 2]) / 255.0;
+        }
+        // High-pass residual (lum - 5x5 local mean) so edges & micro-terraces pop at 2m without drifting macro elevation
+        const edgeArr = new Float32Array(N * N);
+        for (let y = 0; y < N; y++) {
+          for (let x = 0; x < N; x++) {
+            let sum = 0, cnt = 0;
+            for (let dy = -3; dy <= 3; dy++) {
+              const sy = Math.min(N - 1, Math.max(0, y + dy));
+              for (let dx = -3; dx <= 3; dx++) {
+                const sx = Math.min(N - 1, Math.max(0, x + dx));
+                sum += lumArr[sy * N + sx];
+                cnt++;
+              }
+            }
+            edgeArr[y * N + x] = (lumArr[y * N + x] - sum / cnt) * 4.5;
+          }
         }
         state.realOpticalEdge = edgeArr;
         appendLog(`[3/5] Textura óptica ${state.activeBasemap.toUpperCase()} vinculada ao guia TSharp e à malha 3D!`, 'ok');
@@ -1793,10 +1814,10 @@ git push origin main</pre>
           const sDist = streamDist[idx];
           const rDist = roadDist[idx];
           const streamIncision = sDist < 4.5 ? -2.4 * Math.exp(-0.45 * sDist * sDist) : 0;
-          const roughAmp = 0.25 + state.roughness * 1.9;
+          const roughAmp = state.roughness * 2.8;
           const microDetail = hasRealOpt
-            ? state.realOpticalEdge[idx] * 1.8 * roughAmp
-            : 1.2 * roughAmp * Math.sin(nx * 22.0 + ny * 14.0) * Math.cos(ny * 19.0);
+            ? state.realOpticalEdge[idx] * (0.4 + roughAmp)
+            : (0.2 + roughAmp) * (Math.sin(nx * 28.0 + ny * 18.0) * Math.cos(ny * 24.0) + 0.4 * Math.sin(nx * 65.0) * Math.cos(ny * 65.0));
 
           rawGround[idx] = macro + streamIncision + microDetail;
           opticalGuideGrad[idx] = microDetail + (sDist < 3.5 ? -1.8 : 0);
@@ -1810,8 +1831,8 @@ git push origin main</pre>
         }
       }
 
-      // 30m coarse block averaging
-      const block = 8;
+      // True 30m coarse block averaging based on exact metric cellSizeM!
+      const block = Math.max(1, Math.round(30.0 / (state.cellSizeM || 2.0)));
       for (let by = 0; by < N; by += block) {
         for (let bx = 0; bx < N; bx += block) {
           let sum = 0, count = 0;
@@ -1878,7 +1899,7 @@ git push origin main</pre>
 
       // Apply Multi-Pass Gaussian Spatial Smoothing on 2m DTM to eliminate blocky artifacts
       const smoothBuf = new Float32Array(N * N);
-      const numSmoothPasses = Math.max(1, Math.round(5 - state.roughness * 4));
+      const numSmoothPasses = Math.max(0, Math.round((1.0 - state.roughness) * 4));
       for (let pass = 0; pass < numSmoothPasses; pass++) {
         for (let y = 0; y < N; y++) {
           for (let x = 0; x < N; x++) {
@@ -1904,7 +1925,7 @@ git push origin main</pre>
       let sumAspect = 0;
       let sumInsol = 0;
       let sumTobler = 0;
-      const cellRes = 2.0;
+      const cellRes = state.cellSizeM || 2.0;
 
       const azRad = (state.sunAzimuth * Math.PI) / 180.0;
       const altRad = (state.sunAltitude * Math.PI) / 180.0;
@@ -1976,7 +1997,7 @@ git push origin main</pre>
         minElevM: minZ,
         maxElevM: maxZ,
         meanSlope2mDeg: sumSlope2mDeg / totalCells,
-        meanSlope30mDeg: Math.min(24.5, (sumSlope30mDeg / totalCells) * 1.45 + 3.2),
+        meanSlope30mDeg: sumSlope30mDeg / totalCells,
         meanAspectDeg: sumAspect / totalCells,
         meanInsolation: sumInsol / totalCells,
         meanTobler: sumTobler / totalCells,
@@ -2490,12 +2511,13 @@ git push origin main</pre>
           const dropM = Math.max(0.0, dtm[firstIdx] - dtm[lastIdx]);
           const slpPct = (dropM / lenMeters) * 100.0;
           const accCells = Math.round(flowacc[lastIdx]);
+          const cellAreaM2 = Math.pow(state.cellSizeM || 2.0, 2);
 
           segments.push({
             id: segments.length + 1,
             strahler: Math.max(1, strahler[firstIdx]),
             flowCells: accCells,
-            areaM2: accCells * 4.0,
+            areaM2: Math.round(accCells * cellAreaM2),
             lengthM: Number(lenMeters.toFixed(1)),
             slopePct: Number(slpPct.toFixed(2)),
             elevStartM: Number(dtm[firstIdx].toFixed(2)),
@@ -2585,9 +2607,10 @@ git push origin main</pre>
       rCtx.putImageData(imgData, 0, 0);
 
       // Upsample 3x with high-quality bicubic/bilinear browser smoothing (360x360)
+      const hiSize = Math.min(720, N * 2);
       const hiCanvas = document.createElement('canvas');
-      hiCanvas.width = N * 3;
-      hiCanvas.height = N * 3;
+      hiCanvas.width = hiSize;
+      hiCanvas.height = hiSize;
       const hCtx = hiCanvas.getContext('2d');
       hCtx.imageSmoothingEnabled = !isShowing30m;
       if (!isShowing30m) hCtx.imageSmoothingQuality = 'high';
@@ -3254,8 +3277,9 @@ git push origin main</pre>
       }
 
       const N = state.gridSize;
+      const M = Math.min(N, 140);
       const blockSize = 120;
-      const geom = new THREE.PlaneGeometry(blockSize, blockSize, N - 1, N - 1);
+      const geom = new THREE.PlaneGeometry(blockSize, blockSize, M - 1, M - 1);
       geom.rotateX(-Math.PI / 2);
 
       const posAttr = geom.attributes.position;
@@ -3279,17 +3303,23 @@ git push origin main</pre>
 
       const blendBase = state.texture3DMode === 'basemap' ? 1.0 : state.texture3DMode === 'palette' ? 0.0 : state.fusion3DBaseRatio;
 
-      for (let i = 0; i < posAttr.count; i++) {
-        const zElev = state.grids.dtm2m[i];
-        const normH = (zElev - minZ) / zSpan;
-        const yPos = normH * 14.0 * state.exaggeration3D - 4.0;
-        posAttr.setY(i, yPos);
+      for (let vy = 0; vy < M; vy++) {
+        const gy = Math.min(N - 1, Math.round((vy / (M - 1)) * (N - 1)));
+        for (let vx = 0; vx < M; vx++) {
+          const gx = Math.min(N - 1, Math.round((vx / (M - 1)) * (N - 1)));
+          const vIdx = vy * M + vx;
+          const gIdx = gy * N + gx;
 
-        const [pr, pg, pb] = getPixelRGB(i, array, minVal, maxVal, true);
-        let r = pr, g = pg, b = pb;
+          const zElev = state.grids.dtm2m[gIdx];
+          const normH = (zElev - minZ) / zSpan;
+          const yPos = normH * 14.0 * state.exaggeration3D - 4.0;
+          posAttr.setY(vIdx, yPos);
 
-        if (basePx && (state.texture3DMode === 'fusion' || state.texture3DMode === 'basemap')) {
-          const p = i * 4;
+          const [pr, pg, pb] = getPixelRGB(gIdx, array, minVal, maxVal, true);
+          let r = pr, g = pg, b = pb;
+
+          if (basePx && (state.texture3DMode === 'fusion' || state.texture3DMode === 'basemap')) {
+            const p = gIdx * 4;
           const br = basePx[p];
           const bg = basePx[p + 1];
           const bb = basePx[p + 2];
@@ -3298,9 +3328,10 @@ git push origin main</pre>
           b = Math.round(bb * blendBase + pb * (1.0 - blendBase));
         }
 
-        colors[i * 3] = r / 255.0;
-        colors[i * 3 + 1] = g / 255.0;
-        colors[i * 3 + 2] = b / 255.0;
+          colors[vIdx * 3] = r / 255.0;
+          colors[vIdx * 3 + 1] = g / 255.0;
+          colors[vIdx * 3 + 2] = b / 255.0;
+        }
       }
 
       geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -3334,11 +3365,11 @@ git push origin main</pre>
       };
 
       const topEdge = [], bottomEdge = [], leftEdge = [], rightEdge = [];
-      for (let i = 0; i < N; i++) {
+      for (let i = 0; i < M; i++) {
         topEdge.push(i);
-        bottomEdge.push((N - 1) * N + i);
-        leftEdge.push(i * N);
-        rightEdge.push(i * N + (N - 1));
+        bottomEdge.push((M - 1) * M + i);
+        leftEdge.push(i * M);
+        rightEdge.push(i * M + (M - 1));
       }
       threeSkirtGroup.add(buildEdgeSkirt(topEdge));
       threeSkirtGroup.add(buildEdgeSkirt(bottomEdge));
@@ -3562,7 +3593,7 @@ git push origin main</pre>
       const seriesSlope = [];
 
       const [[nxA, nyA], [nxB, nyB]] = getTransectEndpointsNormalized();
-      const totalDistM = Math.hypot(nxB - nxA, nyB - nyA) * N * 2.0;
+      const totalDistM = Math.hypot(nxB - nxA, nyB - nyA) * N * (state.cellSizeM || 2.0);
 
       for (let i = 0; i < samples; i++) {
         const u = i / (samples - 1);
