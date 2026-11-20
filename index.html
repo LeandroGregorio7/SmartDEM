@@ -885,7 +885,26 @@ git push origin main</pre>
           </button>
         </div>
       </div>
-      <div id="tutorialBody" class="p-5 text-xs text-slate-200 space-y-3 leading-relaxed"></div>
+      <div id="tutorialBody" class="p-5 text-xs text-slate-200 space-y-3 leading-relaxed">
+          <div class="space-y-2.5">
+            <div class="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-800/70 border border-slate-700/80">
+              <span class="w-5 h-5 rounded-full bg-sky-500 text-slate-950 font-bold flex items-center justify-center shrink-0">1</span>
+              <div><strong>Selecione a Área (Passo 1):</strong> Desenhe um retângulo, quadrado, círculo ou polígono direto no mapa, importe seu arquivo (<code>.kml</code>, <code>.geojson</code>, <code>.shp</code>) ou escolha uma área exemplo.</div>
+            </div>
+            <div class="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-800/70 border border-slate-700/80">
+              <span class="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 font-bold flex items-center justify-center shrink-0">2</span>
+              <div><strong>Gere o MDT 2m Suavizado (Passo 2):</strong> Clique em <em>Executar Super-Resolução</em>. Escolha entre Altitude, Declividade, Direção ou Insolação, unidades (<code>m/ft</code>, <code>°/%</code>) e Vista 2D/3D.</div>
+            </div>
+            <div class="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-800/70 border border-slate-700/80">
+              <span class="w-5 h-5 rounded-full bg-purple-400 text-slate-950 font-bold flex items-center justify-center shrink-0">3</span>
+              <div><strong>Análises Opcionais (Passo 3):</strong> Ative sob demanda apenas o que precisar: <em>Perfil Topográfico</em>, <em>Drenagem D8 &amp; Bacia por Exutório</em>, <em>Curvas de Nível</em> ou <em>Tabela EMBRAPA</em>.</div>
+            </div>
+            <div class="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-800/70 border border-slate-700/80">
+              <span class="w-5 h-5 rounded-full bg-amber-400 text-slate-950 font-bold flex items-center justify-center shrink-0">4</span>
+              <div><strong>Exporte (Passo 4):</strong> Baixe o raster em <strong>GeoTIFF (.tif)</strong>, <strong>ASC</strong>, <strong>Shapefile (.zip)</strong> ou a captura <strong>PNG com legenda</strong>.</div>
+            </div>
+          </div>
+      </div>
       <div class="px-5 py-3 bg-slate-950/80 border-t border-slate-800 flex items-center justify-between">
         <span class="text-[11px] text-slate-400" data-i18n="tutFooterNote">O mapa inicia 100% limpo. Siga os Passos 1 a 4 à direita.</span>
         <button id="btnStartNowTutorial" class="px-4 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-950 hover:opacity-95 transition" data-i18n="btnStartNow">
@@ -2155,7 +2174,7 @@ git push origin main</pre>
       // Adaptive stride so Marching Squares always stays fast (< 25ms) even on 320x320 grids
       const step = Math.max(2, Math.floor(N / 70));
       for (let level = minZ; level <= maxZ; level += effInterval) {
-        const isMaster = Math.abs(Math.round(level / interval) % 5) === 0;
+        const isMaster = Math.abs(Math.round(level / effInterval) % 5) === 0;
         const segments = [];
 
         for (let y = 0; y < N - step; y += step) {
@@ -2215,7 +2234,7 @@ git push origin main</pre>
       state.extractedContours = contours;
       const badge = document.getElementById('contourCountBadge');
       if (badge) {
-        badge.textContent = `${contours.length} isolinhas (${interval}m)`;
+        badge.textContent = `${contours.length} isolinhas (${effInterval}m)`;
       }
     }
 
@@ -4890,8 +4909,13 @@ git push origin main</pre>
       }
 
       try {
-        computeSuperResolutionPipeline();
         applyLanguage('pt');
+      } catch (e) {
+        console.warn('Language init error:', e);
+      }
+
+      try {
+        computeSuperResolutionPipeline();
         if (mapInstance) {
           mapInstance.fitBounds(PRESET_AOIS.samambaia.bounds, { padding: [20, 20] });
         }
