@@ -1,4 +1,4 @@
-# TSharp-DEM 2m | Super-Resolução Topográfica Cloud, Hidrologia D8 & Motor Smart15
+# SmartDEM - Super Resolution | Super-Resolução Topográfica Cloud, Hidrologia D8 & Motor Smart15
 
 **Author:** Dr. Leandro Gregório ([@LeandroGregorio7](https://github.com/LeandroGregorio7)) — [GeoSmart](https://geosmart.online) | [LinkedIn](https://www.linkedin.com/in/leandrogregoriogeo/)
 
@@ -6,7 +6,7 @@
 
 ## 🇧🇷 Visão Geral (Português)
 
-**TSharp-DEM 2m** é um WebApp 100% *client-side* (hospedado via GitHub Pages, sem necessidade de instalação de plugins) que realiza o *downscaling* guiado de Modelos Digitais de Elevação (MDEs) de **30 m para 2 m**, fechando a tríade de alta resolução da plataforma **Smart15**:
+**SmartDEM - Super Resolution** é um WebApp 100% *client-side* (hospedado via GitHub Pages, sem necessidade de instalação de plugins) que realiza o *downscaling* guiado de Modelos Digitais de Elevação (MDEs) de **30 m para 2 m**, fechando a tríade de alta resolução da plataforma **Smart15**:
 1. **Rede Viária e POIs (OpenStreetMap)**
 2. **Conforto Térmico e Uso/Cobertura da Terra (LST Super-Resolution + Smart OBIA + BARU Validator)**
 3. **Microtopografia Urbana a 2 m, Hidrologia D8 e Impedância de Caminhada/Ciclismo de Tobler**
@@ -38,7 +38,7 @@
 
 ## 🌐 Overview (English)
 
-**TSharp-DEM 2m** is a standalone, zero-install browser WebApp hosted on GitHub Pages that downscales 30 m elevation models down to **2 m resolution** using optical-guided super-resolution, [ANADEM](https://www.mdpi.com/2072-4292/16/13/2321)/[FABDEM](https://gee-community-catalog.org/projects/fabdem/) bare-earth filtering, and OpenStreetMap road/stream conditioning.
+**SmartDEM - Super Resolution** is a standalone, zero-install browser WebApp hosted on GitHub Pages that downscales 30 m elevation models down to **2 m resolution** using optical-guided super-resolution, [ANADEM](https://www.mdpi.com/2072-4292/16/13/2321)/[FABDEM](https://gee-community-catalog.org/projects/fabdem/) bare-earth filtering, and OpenStreetMap road/stream conditioning.
 
 It includes 2D/3D WebGL visualization, KML/GeoJSON/SHP AOI upload, Elevation (`m`/`ft`), Slope (`°`/`%`), Aspect, Solar Insolation, Topographic Profile (`PNG`), Equidistant Contours (`1m–10m`), EMBRAPA Zonal Slope Classification (`CSV`), D8 Flow Direction & Strahler Drainage Network, and Clicked Pour-Point Watershed Delineation — exporting directly to **GeoTIFF (`.tif`)**, **ESRI ASCII (`.asc`)**, **XYZ (`.xyz`)**, **GeoJSON (`.geojson`)**, and **ESRI Shapefile (`.zip`)**.
 
