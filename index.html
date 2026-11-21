@@ -273,10 +273,9 @@
               <span class="flex items-center gap-1.5"><i data-lucide="sun" class="w-3.5 h-3.5 text-amber-300"></i> <span data-i18n="threeTitle">Paisagem 3D (OSM Buildings + 2m)</span></span>
             </div>
 
-            <!-- Explicit MDT vs MDS 3D Terrain Mode -->
-            <div class="grid grid-cols-2 gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-[11px]">
-              <button id="btn3DModeMDT" class="py-1 px-2 rounded font-bold bg-sky-500 text-slate-950 transition">MDT (Solo Nu)</button>
-              <button id="btn3DModeMDS" class="py-1 px-2 rounded font-semibold text-slate-300 hover:text-white transition">MDS (Superfície)</button>
+            <div class="hidden">
+              <button id="btn3DModeMDT">MDT</button>
+              <button id="btn3DModeMDS">MDS</button>
             </div>
 
             <div class="space-y-1.5 pt-1 border-t border-slate-800">
@@ -306,27 +305,43 @@
                 <input id="sliderExaggeration" type="range" min="10" max="60" value="20" class="w-full h-1.5 bg-slate-700 rounded cursor-pointer" />
               </div>
 
-              <!-- Separate Layers: Only Buildings (OSM Buildings) & Only Vegetation (Canopy) -->
-              <div class="pt-1.5 border-t border-slate-800 space-y-1.5">
-                <label class="flex items-center justify-between text-[11px] text-amber-300 cursor-pointer">
-                  <span class="flex items-center gap-1.5">
-                    <input id="chk3DBuildings" type="checkbox" class="rounded border-slate-600 text-amber-500 bg-slate-900" />
-                    <span data-i18n="chk3DBuildings">Edificações 3D (OSM Buildings)</span>
-                  </span>
-                  <span id="badgeBldCount" class="mono text-[9px] text-slate-400">0</span>
-                </label>
+              <!-- Separate Real Vector Layers: OSM Buildings & OSM High Vegetation / Trees -->
+              <div class="pt-1.5 border-t border-slate-800 space-y-2">
+                <div class="space-y-1">
+                  <label class="flex items-center justify-between text-[11px] text-amber-300 font-semibold cursor-pointer">
+                    <span class="flex items-center gap-1.5">
+                      <input id="chk3DBuildings" type="checkbox" class="rounded border-slate-600 text-amber-500 bg-slate-900" />
+                      <span data-i18n="chk3DBuildings">Edificações (OSM Buildings)</span>
+                    </span>
+                    <span id="badgeBldCount" class="mono text-[9px] text-amber-200 bg-amber-500/20 px-1.5 rounded">0</span>
+                  </label>
+                  <div class="grid grid-cols-2 gap-1">
+                    <button id="btnExport3DBuildings" class="py-1 px-1.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-[10px] font-medium transition">
+                      Prédios (.geojson)
+                    </button>
+                    <button id="btnExport3DBuildingsShp" class="py-1 px-1.5 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-[10px] font-medium transition">
+                      Prédios SHP (.zip)
+                    </button>
+                  </div>
+                </div>
 
-                <label class="flex items-center justify-between text-[11px] text-emerald-300 cursor-pointer">
-                  <span class="flex items-center gap-1.5">
-                    <input id="chk3DTrees" type="checkbox" class="rounded border-slate-600 text-emerald-500 bg-slate-900" />
-                    <span data-i18n="chk3DTrees">Vegetação / Copas 3D (Separada)</span>
-                  </span>
-                  <span id="badgeVegStatus" class="mono text-[9px] text-slate-400">OFF</span>
-                </label>
-
-                <button id="btnExport3DBuildings" class="w-full py-1 px-2 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-[10px] font-medium transition">
-                  <span data-i18n="btnExpBuildings">Exportar Prédios 3D (.geojson)</span>
-                </button>
+                <div class="space-y-1 pt-1 border-t border-slate-800/80">
+                  <label class="flex items-center justify-between text-[11px] text-emerald-300 font-semibold cursor-pointer">
+                    <span class="flex items-center gap-1.5">
+                      <input id="chk3DTrees" type="checkbox" class="rounded border-slate-600 text-emerald-500 bg-slate-900" />
+                      <span data-i18n="chk3DTrees">Vegetação Alta / Árvores (OSM)</span>
+                    </span>
+                    <span id="badgeVegStatus" class="mono text-[9px] text-emerald-200 bg-emerald-500/20 px-1.5 rounded">0</span>
+                  </label>
+                  <div class="grid grid-cols-2 gap-1">
+                    <button id="btnExport3DVegGeoJSON" class="py-1 px-1.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-[10px] font-medium transition">
+                      Vegetação (.geojson)
+                    </button>
+                    <button id="btnExport3DVegShp" class="py-1 px-1.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-[10px] font-medium transition">
+                      Vegetação SHP (.zip)
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -489,27 +504,19 @@ git push origin main</pre>
           </h2>
         </div>
 
-        <!-- Explicit Separate Model Selector: MDT (Bare-Earth DEM) vs MDS (Surface: Canopy + Real OSM Buildings) -->
-        <div class="grid grid-cols-2 gap-2 text-xs">
-          <button id="btnRunDEM" class="py-2.5 px-3 rounded-lg font-bold bg-gradient-to-r from-sky-500 to-emerald-500 hover:from-sky-400 hover:to-emerald-400 text-slate-950 shadow-lg shadow-sky-500/20 flex items-center justify-center gap-1.5 transition">
-            <i data-lucide="mountain" class="w-4 h-4"></i>
-            <span data-i18n="btnRunDEM">Gerar MDT 2m (Solo Nu)</span>
-          </button>
-          <button id="btnRunMDS" class="py-2.5 px-3 rounded-lg font-bold bg-slate-800 hover:bg-amber-500/25 text-amber-300 border border-amber-500/50 flex items-center justify-center gap-1.5 transition">
-            <i data-lucide="building-2" class="w-4 h-4"></i>
-            <span data-i18n="btnRunMDS">Gerar MDS 2m (Prédios/Copas)</span>
-          </button>
-        </div>
-        <!-- Keep legacy btnRunSR hidden-accessible or mapped cleanly -->
-        <button id="btnRunSR" class="hidden" aria-hidden="true">Executar Super-Resolução</button>
+        <!-- Primary Action Button: Pure DEM 2m Super-Resolution -->
+        <button id="btnRunDEM" class="w-full py-2.5 px-4 rounded-lg font-bold text-xs bg-gradient-to-r from-sky-500 to-emerald-500 hover:from-sky-400 hover:to-emerald-400 text-slate-950 shadow-lg shadow-sky-500/20 flex items-center justify-center gap-2 transition">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+          <span data-i18n="btnRunDEM">Executar Super-Resolução DEM (30m &rarr; 2m)</span>
+        </button>
+        <button id="btnRunMDS" class="hidden" aria-hidden="true">MDS</button>
+        <button id="btnRunSR" class="hidden" aria-hidden="true">SR</button>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
           <div>
             <label for="selectRenderLayer" class="block text-[11px] text-slate-300 mb-1 font-medium" data-i18n="lblVariable">Variável no Mapa:</label>
             <select id="selectRenderLayer" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-sky-500">
               <option value="dtm2m">Altitude MDT 2m (Solo Nu / Bare-Earth)</option>
-              <option value="mds2m">MDS 2m (Superfície Contínua: Terreno + Copas + Prédios)</option>
-              <option value="ndsm2m">nDSM / CHM 2m (Altura de Copas &amp; Prédios = MDS - MDT)</option>
               <option value="slope2m">Declividade 2m (Slope)</option>
               <option value="aspect2m">Direção / Orientação 2m (Aspect)</option>
               <option value="insolation2m">Insolação / Radiação Solar 2m</option>
@@ -694,6 +701,16 @@ git push origin main</pre>
           <button id="btnOptTabEmbrapa" class="py-2 px-2.5 rounded-lg font-medium bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 flex items-center justify-between transition">
             <span class="flex items-center gap-1.5"><i data-lucide="table-2" class="w-3.5 h-3.5 text-emerald-400"></i> <span data-i18n="optEmbrapa">Relevo EMBRAPA</span></span>
             <span id="badgeOptEmbrapa" class="text-[10px] mono text-slate-400">Ver</span>
+          </button>
+
+          <button id="btnOptTabBuildings" class="py-2 px-2.5 rounded-lg font-medium bg-slate-900 hover:bg-slate-800 text-amber-200 border border-amber-500/30 flex items-center justify-between transition">
+            <span class="flex items-center gap-1.5"><i data-lucide="building-2" class="w-3.5 h-3.5 text-amber-400"></i> <span>Edificações (OSM)</span></span>
+            <span id="badgeOptBuildings" class="text-[10px] mono text-slate-400">OFF</span>
+          </button>
+
+          <button id="btnOptTabVegetation" class="py-2 px-2.5 rounded-lg font-medium bg-slate-900 hover:bg-slate-800 text-emerald-200 border border-emerald-500/30 flex items-center justify-between transition">
+            <span class="flex items-center gap-1.5"><i data-lucide="trees" class="w-3.5 h-3.5 text-emerald-400"></i> <span>Vegetação Alta (OSM)</span></span>
+            <span id="badgeOptVegetation" class="text-[10px] mono text-slate-400">OFF</span>
           </button>
         </div>
 
@@ -1393,6 +1410,7 @@ git push origin main</pre>
       show3DBuildings: false,
       show3DTrees: false,
       osmBuildings3D: [],
+      osmVegetation3D: [],
       trees3DPositions: [],
       osmGrading: true,
       showVectors: false,
@@ -3173,6 +3191,7 @@ git push origin main</pre>
       state.customBounds = bounds;
       state.customPolygonLatLngs = polyLatLngs;
       state.osmBuildings3D = [];
+      state.osmVegetation3D = [];
       state.aoiReady = true;
       state.hasProcessed = false;
       exitDrawMode();
@@ -3400,6 +3419,52 @@ git push origin main</pre>
         })
           .bindTooltip(`${feat.name}`)
           .addTo(vectorLayerGroup);
+        }
+      }
+
+      // Render Real OSM Buildings Footprints on 2D Map
+      if (state.show3DBuildings && state.osmBuildings3D && state.osmBuildings3D.length > 0) {
+        for (const b of state.osmBuildings3D) {
+          if (!b.polyNorm || b.polyNorm.length < 3) continue;
+          const latlngs = b.polyNorm.map(([nx, ny]) => [nLat - ny * (nLat - sLat), wLon + nx * (eLon - wLon)]);
+          L.polygon(latlngs, {
+            pane: 'smartdemVectorsPane',
+            color: '#f59e0b',
+            weight: 1.2,
+            fillColor: '#fef3c7',
+            fillOpacity: 0.55
+          })
+            .bindTooltip(`${b.name} (Altura: ${b.heightM.toFixed(1)} m)`)
+            .addTo(vectorLayerGroup);
+        }
+      }
+
+      // Render Real OSM High Vegetation / Forests / Trees on 2D Map
+      if (state.show3DTrees && state.osmVegetation3D && state.osmVegetation3D.length > 0) {
+        for (const v of state.osmVegetation3D) {
+          if (v.polyNorm && v.polyNorm.length >= 3) {
+            const latlngs = v.polyNorm.map(([nx, ny]) => [nLat - ny * (nLat - sLat), wLon + nx * (eLon - wLon)]);
+            L.polygon(latlngs, {
+              pane: 'smartdemVectorsPane',
+              color: '#10b981',
+              weight: 1.4,
+              fillColor: '#059669',
+              fillOpacity: 0.45
+            })
+              .bindTooltip(`${v.name} (${v.vegClass} | Copa ~${v.heightM.toFixed(1)} m)`)
+              .addTo(vectorLayerGroup);
+          } else {
+            const pt = [nLat - v.ny * (nLat - sLat), wLon + v.nx * (eLon - wLon)];
+            L.circleMarker(pt, {
+              pane: 'smartdemVectorsPane',
+              radius: 3.5,
+              color: '#065f46',
+              fillColor: '#10b981',
+              fillOpacity: 0.85
+            })
+              .bindTooltip(`Árvore OSM (Copa ~${v.heightM.toFixed(1)} m)`)
+              .addTo(vectorLayerGroup);
+          }
         }
       }
 
@@ -3656,8 +3721,7 @@ git push origin main</pre>
           const vIdx = vy * M + vx;
           const gIdx = gy * N + gx;
 
-          const useMdsSurface = (state.renderLayer === 'mds2m' || state.show3DTrees) && state.grids.mds2m;
-          const zElev = useMdsSurface ? state.grids.mds2m[gIdx] : state.grids.dtm2m[gIdx];
+          const zElev = state.grids.dtm2m[gIdx];
           const normH = (zElev - minZ) / zSpan;
           const yPos = normH * 14.0 * state.exaggeration3D - 4.0;
           posAttr.setY(vIdx, yPos);
@@ -3758,16 +3822,16 @@ git push origin main</pre>
       window._threeSunMesh = sunGroup;
       threeScene.add(sunGroup);
 
-      // 1. OSM Buildings-Style 3D Extrusion (Independent "Edificações 3D" layer)
+      // 1. OSM Buildings 3D Extrusion (Real Architectural Polygons — always clearly visible on top of DEM!)
       if (window._threeBuildingsGroup) {
         threeScene.remove(window._threeBuildingsGroup);
         window._threeBuildingsGroup = null;
       }
       if (state.show3DBuildings && state.osmBuildings3D && state.osmBuildings3D.length > 0) {
         window._threeBuildingsGroup = new THREE.Group();
-        const wallMat = new THREE.MeshLambertMaterial({ color: 0xe7e5e4 });  // Warm architectural concrete (OSM Buildings look)
-        const roofMat = new THREE.MeshLambertMaterial({ color: 0xd6d3d1 });
-        const edgeMat = new THREE.LineBasicMaterial({ color: 0x475569, transparent: true, opacity: 0.65 });
+        const wallMat = new THREE.MeshLambertMaterial({ color: 0xf5f5f4, side: THREE.DoubleSide });
+        const roofMat = new THREE.MeshLambertMaterial({ color: 0xe7e5e4, side: THREE.DoubleSide });
+        const edgeMat = new THREE.LineBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.72 });
 
         for (const b of state.osmBuildings3D) {
           const gx = Math.min(N - 1, Math.max(0, Math.round(b.nx * (N - 1))));
@@ -3775,7 +3839,8 @@ git push origin main</pre>
           const zElev = state.grids.dtm2m[gy * N + gx];
           const normH = (zElev - minZ) / zSpan;
           const groundY = normH * 14.0 * state.exaggeration3D - 4.0;
-          const hUnits = Math.max(1.4, (b.heightM / zSpan) * 14.0 * state.exaggeration3D);
+          // Ensure clear architectural height visibility even on broad AOIs
+          const hUnits = Math.max(2.6, (b.heightM / Math.max(25, zSpan)) * 18.0 * Math.max(1.2, state.exaggeration3D));
 
           if (b.polyNorm && b.polyNorm.length >= 3) {
             const shape = new THREE.Shape();
@@ -3789,44 +3854,54 @@ git push origin main</pre>
             const extrudeGeom = new THREE.ExtrudeGeometry(shape, { depth: hUnits, bevelEnabled: false });
             extrudeGeom.rotateX(-Math.PI / 2);
             const mesh = new THREE.Mesh(extrudeGeom, [roofMat, wallMat]);
-            mesh.position.y = groundY;
+            mesh.position.y = groundY + 0.15;
             window._threeBuildingsGroup.add(mesh);
 
             const edges = new THREE.LineSegments(new THREE.EdgesGeometry(extrudeGeom, 25), edgeMat);
-            edges.position.y = groundY;
+            edges.position.y = groundY + 0.15;
             window._threeBuildingsGroup.add(edges);
           }
         }
         threeScene.add(window._threeBuildingsGroup);
       }
 
-      // 2. Separate Organic 3D Vegetation / Canopy Mass Layer (Independent "Vegetação / Copas 3D" layer)
+      // 2. Real OSM High Vegetation / Forests / Parks 3D Extrusion (Zero fake cones!)
       if (window._threeTreesGroup) {
         threeScene.remove(window._threeTreesGroup);
         window._threeTreesGroup = null;
       }
-      if (state.show3DTrees && state.grids.ndsm2m) {
+      if (state.show3DTrees && state.osmVegetation3D && state.osmVegetation3D.length > 0) {
         window._threeTreesGroup = new THREE.Group();
-        const canopyMat = new THREE.MeshLambertMaterial({ color: 0x2d6a4f, transparent: true, opacity: 0.88 });
-        const stepV = Math.max(3, Math.floor(N / 36));
-        for (let gy = 2; gy < N - 2; gy += stepV) {
-          for (let gx = 2; gx < N - 2; gx += stepV) {
-            const chm = state.grids.ndsm2m[gy * N + gx];
-            if (chm >= 4.0) {
-              const zElev = state.grids.dtm2m[gy * N + gx];
-              const normH = (zElev - minZ) / zSpan;
-              const groundY = normH * 14.0 * state.exaggeration3D - 4.0;
-              const hUnits = Math.max(1.0, (chm / zSpan) * 14.0 * state.exaggeration3D * 0.75);
-              // Organic flattened canopy dome (like Google Earth 3D vegetation mesh, not sharp pine cones)
-              const dome = new THREE.Mesh(new THREE.IcosahedronGeometry(1.9, 1), canopyMat);
-              dome.scale.set(1.15, hUnits / 2.2, 1.15);
-              dome.position.set(
-                (gx / (N - 1) - 0.5) * blockSize,
-                groundY + hUnits * 0.45,
-                (gy / (N - 1) - 0.5) * blockSize
-              );
-              window._threeTreesGroup.add(dome);
-            }
+        const vegTopMat = new THREE.MeshLambertMaterial({ color: 0x2d6a4f, transparent: true, opacity: 0.92, side: THREE.DoubleSide });
+        const vegSideMat = new THREE.MeshLambertMaterial({ color: 0x1b4332, transparent: true, opacity: 0.92, side: THREE.DoubleSide });
+
+        for (const v of state.osmVegetation3D) {
+          const gx = Math.min(N - 1, Math.max(0, Math.round(v.nx * (N - 1))));
+          const gy = Math.min(N - 1, Math.max(0, Math.round(v.ny * (N - 1))));
+          const zElev = state.grids.dtm2m[gy * N + gx];
+          const normH = (zElev - minZ) / zSpan;
+          const groundY = normH * 14.0 * state.exaggeration3D - 4.0;
+          const hUnits = Math.max(2.0, (v.heightM / Math.max(25, zSpan)) * 16.0 * Math.max(1.1, state.exaggeration3D));
+
+          if (v.polyNorm && v.polyNorm.length >= 3) {
+            const shape = new THREE.Shape();
+            v.polyNorm.forEach(([px, py], idx) => {
+              const sx = (px - 0.5) * blockSize;
+              const sy = -(py - 0.5) * blockSize;
+              if (idx === 0) shape.moveTo(sx, sy);
+              else shape.lineTo(sx, sy);
+            });
+            shape.closePath();
+            const extrudeGeom = new THREE.ExtrudeGeometry(shape, { depth: hUnits, bevelEnabled: true, bevelThickness: 0.35, bevelSize: 0.25, bevelSegments: 2 });
+            extrudeGeom.rotateX(-Math.PI / 2);
+            const mesh = new THREE.Mesh(extrudeGeom, [vegTopMat, vegSideMat]);
+            mesh.position.y = groundY + 0.1;
+            window._threeTreesGroup.add(mesh);
+          } else {
+            // Individual OSM natural=tree point rendered as a soft organic canopy sphere
+            const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(1.1, 1), vegTopMat);
+            crown.position.set((v.nx - 0.5) * blockSize, groundY + hUnits * 0.65, (v.ny - 0.5) * blockSize);
+            window._threeTreesGroup.add(crown);
           }
         }
         threeScene.add(window._threeTreesGroup);
@@ -5742,24 +5817,242 @@ git push origin main</pre>
         initOrUpdateThree3D();
       };
 
-      document.getElementById('chk3DBuildings').addEventListener('change', (e) => loadAndToggle3DBuildings(e.target.checked));
-      document.getElementById('btnExport3DBuildings').addEventListener('click', () => {
-        if (state.osmBuildings3D.length === 0) {
-          showToast('Ative "Edificações 3D (OSM/MDS)" primeiro!');
+      // Fetch Real High Vegetation / Forests / Parks / Trees from OpenStreetMap (Overpass API)
+      const fetchRealOSMVegetation = async () => {
+        const [[sLat, wLon], [nLat, eLon]] = getActiveBounds();
+        appendLog('Consultando polígonos reais de vegetação alta, matas e árvores no OpenStreetMap...', 'info');
+        const vegList = [];
+        const mirrors = [
+          'https://overpass-api.de/api/interpreter',
+          'https://overpass.kumi.systems/api/interpreter'
+        ];
+        const q = `[out:json][timeout:12];(way["natural"~"wood|scrub|tree_row"](${sLat},${wLon},${nLat},${eLon});way["landuse"~"forest|orchard"](${sLat},${wLon},${nLat},${eLon});way["leisure"~"park|nature_reserve"](${sLat},${wLon},${nLat},${eLon});node["natural"="tree"](${sLat},${wLon},${nLat},${eLon}););out body geom 250;`;
+
+        for (const endpoint of mirrors) {
+          try {
+            const resp = await fetch(endpoint + '?data=' + encodeURIComponent(q));
+            if (!resp.ok) continue;
+            const json = await resp.json();
+            for (const el of (json.elements || []).slice(0, 250)) {
+              const tags = el.tags || {};
+              const vClass = tags.natural || tags.landuse || tags.leisure || 'vegetation';
+              const hM = parseFloat(tags.height) || (vClass === 'forest' || vClass === 'wood' ? 11.0 : vClass === 'tree' ? 8.5 : 6.0);
+              if (el.type === 'way' && el.geometry && el.geometry.length >= 3) {
+                let sumX = 0, sumY = 0;
+                const polyNorm = el.geometry.map((pt) => {
+                  const nx = (pt.lon - wLon) / Math.max(1e-7, eLon - wLon);
+                  const ny = 1.0 - (pt.lat - sLat) / Math.max(1e-7, nLat - sLat);
+                  sumX += nx;
+                  sumY += ny;
+                  return [nx, ny];
+                });
+                vegList.push({
+                  nx: sumX / polyNorm.length,
+                  ny: sumY / polyNorm.length,
+                  polyNorm,
+                  heightM: hM,
+                  vegClass: vClass,
+                  name: tags.name || `Vegetação (${vClass})`
+                });
+              } else if (el.type === 'node' && el.lat && el.lon) {
+                const nx = (el.lon - wLon) / Math.max(1e-7, eLon - wLon);
+                const ny = 1.0 - (el.lat - sLat) / Math.max(1e-7, nLat - sLat);
+                vegList.push({ nx, ny, polyNorm: null, heightM: hM, vegClass: 'tree', name: tags.species || 'Árvore OSM' });
+              }
+            }
+            if (vegList.length > 0) break;
+          } catch (e) {}
+        }
+
+        state.osmVegetation3D = vegList;
+        const vBdg = document.getElementById('badgeVegStatus');
+        if (vBdg) vBdg.textContent = `${vegList.length}`;
+        appendLog(`${vegList.length} feições reais de vegetação alta/árvores carregadas do OpenStreetMap!`, vegList.length > 0 ? 'ok' : 'warn');
+      };
+
+      // Shared Polygon GeoJSON & Shapefile (.zip) Exporter for Buildings & Vegetation
+      const exportRealPolygonFeaturesGeoJSON = (items, filePrefix, propType) => {
+        if (!items || items.length === 0) {
+          showToast('Ative a camada primeiro para carregar os vetores do OSM!');
           return;
         }
         const [[sLat, wLon], [nLat, eLon]] = getActiveBounds();
-        const features = state.osmBuildings3D.map((b, idx) => ({
-          type: 'Feature',
-          properties: { id: idx + 1, name: b.name, height_m: b.heightM },
-          geometry: {
-            type: 'Point',
-            coordinates: [Number((wLon + b.nx * (eLon - wLon)).toFixed(6)), Number((nLat - b.ny * (nLat - sLat)).toFixed(6))]
+        const features = items.map((item, idx) => {
+          if (item.polyNorm && item.polyNorm.length >= 3) {
+            const ring = item.polyNorm.map(([nx, ny]) => [
+              Number((wLon + nx * (eLon - wLon)).toFixed(6)),
+              Number((nLat - ny * (nLat - sLat)).toFixed(6))
+            ]);
+            ring.push(ring[0]);
+            return {
+              type: 'Feature',
+              properties: { id: idx + 1, name: item.name, class: item.vegClass || propType, height_m: Number(item.heightM.toFixed(1)) },
+              geometry: { type: 'Polygon', coordinates: [ring] }
+            };
           }
-        }));
-        triggerDownload(new Blob([JSON.stringify({ type: 'FeatureCollection', features }, null, 2)], { type: 'application/geo+json' }), `edificacoes_3d_${state.currentAoiKey}.geojson`);
-        appendLog(`Edificações 3D (${features.length} feições com height_m) exportadas em GeoJSON!`, 'ok');
-      });
+          return {
+            type: 'Feature',
+            properties: { id: idx + 1, name: item.name, class: item.vegClass || propType, height_m: Number(item.heightM.toFixed(1)) },
+            geometry: { type: 'Point', coordinates: [Number((wLon + item.nx * (eLon - wLon)).toFixed(6)), Number((nLat - item.ny * (nLat - sLat)).toFixed(6))] }
+          };
+        });
+        triggerDownload(
+          new Blob([JSON.stringify({ type: 'FeatureCollection', features }, null, 2)], { type: 'application/geo+json' }),
+          `${filePrefix}_${state.currentAoiKey}.geojson`
+        );
+        appendLog(`${features.length} feições reais (${filePrefix}) exportadas em GeoJSON!`, 'ok');
+        showToast(`GeoJSON exportado (${features.length} feições)!`);
+      };
+
+      const exportRealPolygonFeaturesShapefileZip = (items, filePrefix) => {
+        const polyItems = (items || []).filter((it) => it.polyNorm && it.polyNorm.length >= 3);
+        if (polyItems.length === 0) {
+          showToast('Nenhum polígono carregado para exportar em Shapefile!');
+          return;
+        }
+        const [[sLat, wLon], [nLat, eLon]] = getActiveBounds();
+        const rings = polyItems.map((it) => {
+          const r = it.polyNorm.map(([nx, ny]) => [wLon + nx * (eLon - wLon), nLat - ny * (nLat - sLat)]);
+          r.push(r[0]);
+          return r;
+        });
+
+        let shpRecBytes = 0;
+        for (const r of rings) shpRecBytes += 8 + 44 + 4 + r.length * 16;
+        const shpTotal = 100 + shpRecBytes;
+        const shxTotal = 100 + rings.length * 8;
+        const shpBuf = new ArrayBuffer(shpTotal);
+        const shpView = new DataView(shpBuf);
+        const shxBuf = new ArrayBuffer(shxTotal);
+        const shxView = new DataView(shxBuf);
+
+        const writeHdr = (v, len) => {
+          v.setInt32(0, 9994, false);
+          v.setInt32(24, len / 2, false);
+          v.setInt32(28, 1000, true);
+          v.setInt32(32, 5, true); // Polygon = 5
+          v.setFloat64(36, wLon, true);
+          v.setFloat64(44, sLat, true);
+          v.setFloat64(52, eLon, true);
+          v.setFloat64(60, nLat, true);
+        };
+        writeHdr(shpView, shpTotal);
+        writeHdr(shxView, shxTotal);
+
+        let sp = 100, xp = 100;
+        for (let i = 0; i < rings.length; i++) {
+          const r = rings[i];
+          const cBytes = 44 + 4 + r.length * 16;
+          shxView.setInt32(xp, sp / 2, false);
+          shxView.setInt32(xp + 4, cBytes / 2, false);
+          xp += 8;
+
+          shpView.setInt32(sp, i + 1, false);
+          shpView.setInt32(sp + 4, cBytes / 2, false);
+          sp += 8;
+
+          let xmin = Infinity, ymin = Infinity, xmax = -Infinity, ymax = -Infinity;
+          for (const [x, y] of r) {
+            if (x < xmin) xmin = x; if (x > xmax) xmax = x;
+            if (y < ymin) ymin = y; if (y > ymax) ymax = y;
+          }
+          shpView.setInt32(sp, 5, true);
+          shpView.setFloat64(sp + 4, xmin, true);
+          shpView.setFloat64(sp + 12, ymin, true);
+          shpView.setFloat64(sp + 20, xmax, true);
+          shpView.setFloat64(sp + 28, ymax, true);
+          shpView.setInt32(sp + 36, 1, true);
+          shpView.setInt32(sp + 40, r.length, true);
+          shpView.setInt32(sp + 44, 0, true);
+          sp += 48;
+          for (const [x, y] of r) {
+            shpView.setFloat64(sp, x, true);
+            shpView.setFloat64(sp + 8, y, true);
+            sp += 16;
+          }
+        }
+
+        const fields = [
+          { name: 'ID', type: 'N', len: 6, dec: 0 },
+          { name: 'HEIGHT_M', type: 'N', len: 10, dec: 1 }
+        ];
+        const headerLen = 32 + fields.length * 32 + 1;
+        const recordLen = 1 + 16;
+        const dbfBuf = new Uint8Array(headerLen + polyItems.length * recordLen + 1);
+        const dbfView = new DataView(dbfBuf.buffer);
+        dbfBuf[0] = 0x03; dbfBuf[1] = 126; dbfBuf[2] = 11; dbfBuf[3] = 21;
+        dbfView.setUint32(4, polyItems.length, true);
+        dbfView.setUint16(8, headerLen, true);
+        dbfView.setUint16(10, recordLen, true);
+        let fOff = 32;
+        for (const f of fields) {
+          for (let c = 0; c < f.name.length; c++) dbfBuf[fOff + c] = f.name.charCodeAt(c);
+          dbfBuf[fOff + 11] = f.type.charCodeAt(0);
+          dbfBuf[fOff + 16] = f.len;
+          dbfBuf[fOff + 17] = f.dec;
+          fOff += 32;
+        }
+        dbfBuf[fOff] = 0x0d;
+        let rOff = headerLen;
+        const writePad = (s, w) => {
+          const p = s.padStart(w, ' ').slice(0, w);
+          for (let c = 0; c < w; c++) dbfBuf[rOff + c] = p.charCodeAt(c);
+          rOff += w;
+        };
+        for (let i = 0; i < polyItems.length; i++) {
+          dbfBuf[rOff++] = 0x20;
+          writePad(String(i + 1), 6);
+          writePad(polyItems[i].heightM.toFixed(1), 10);
+        }
+        dbfBuf[rOff] = 0x1a;
+
+        const prjBytes = new TextEncoder().encode(
+          'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]]'
+        );
+        const baseName = `${filePrefix}_${state.currentAoiKey}`;
+        const zipBlob = buildUncompressedZipBlob([
+          { name: `${baseName}.shp`, data: new Uint8Array(shpBuf) },
+          { name: `${baseName}.shx`, data: new Uint8Array(shxBuf) },
+          { name: `${baseName}.dbf`, data: dbfBuf },
+          { name: `${baseName}.prj`, data: prjBytes }
+        ]);
+        triggerDownload(zipBlob, `${baseName}_shapefile.zip`);
+        appendLog(`Shapefile Poligonal (${polyItems.length} feições) de '${filePrefix}' exportado!`, 'ok');
+        showToast(`Shapefile (.zip) exportado (${polyItems.length} polígonos)!`);
+      };
+
+      const toggleBuildingsLayer = async (enabled) => {
+        state.show3DBuildings = enabled;
+        document.getElementById('chk3DBuildings').checked = enabled;
+        document.getElementById('badgeOptBuildings').textContent = enabled ? 'ON' : 'OFF';
+        document.getElementById('badgeOptBuildings').className = enabled ? 'text-[10px] mono text-amber-300 font-bold' : 'text-[10px] mono text-slate-400';
+        if (enabled && state.osmBuildings3D.length === 0) {
+          await fetchRealOSMBuildingPolygons();
+        }
+        if (state.is3D) initOrUpdateThree3D();
+        renderMapOverlays();
+      };
+
+      const toggleVegetationLayer = async (enabled) => {
+        state.show3DTrees = enabled;
+        document.getElementById('chk3DTrees').checked = enabled;
+        document.getElementById('badgeOptVegetation').textContent = enabled ? 'ON' : 'OFF';
+        document.getElementById('badgeOptVegetation').className = enabled ? 'text-[10px] mono text-emerald-300 font-bold' : 'text-[10px] mono text-slate-400';
+        if (enabled && state.osmVegetation3D.length === 0) {
+          await fetchRealOSMVegetation();
+        }
+        if (state.is3D) initOrUpdateThree3D();
+        renderMapOverlays();
+      };
+
+      document.getElementById('chk3DBuildings').addEventListener('change', (e) => toggleBuildingsLayer(e.target.checked));
+      document.getElementById('btnOptTabBuildings').addEventListener('click', () => toggleBuildingsLayer(!state.show3DBuildings));
+      document.getElementById('btnExport3DBuildings').addEventListener('click', () => exportRealPolygonFeaturesGeoJSON(state.osmBuildings3D, 'edificacoes_osm', 'building'));
+      document.getElementById('btnExport3DBuildingsShp').addEventListener('click', () => exportRealPolygonFeaturesShapefileZip(state.osmBuildings3D, 'edificacoes_osm'));
+
+      document.getElementById('btnOptTabVegetation').addEventListener('click', () => toggleVegetationLayer(!state.show3DTrees));
+      document.getElementById('btnExport3DVegGeoJSON').addEventListener('click', () => exportRealPolygonFeaturesGeoJSON(state.osmVegetation3D, 'vegetacao_alta_osm', 'vegetation'));
+      document.getElementById('btnExport3DVegShp').addEventListener('click', () => exportRealPolygonFeaturesShapefileZip(state.osmVegetation3D, 'vegetacao_alta_osm'));
 
       // Clear Profile button
       document.getElementById('btnClearProfile').addEventListener('click', () => {
@@ -6092,12 +6385,7 @@ git push origin main</pre>
         appendLog('Terreno 3D alternado para MDS (Superfície).', 'info');
       });
 
-      document.getElementById('chk3DTrees').addEventListener('change', (e) => {
-        state.show3DTrees = e.target.checked;
-        document.getElementById('badgeVegStatus').textContent = state.show3DTrees ? 'ON' : 'OFF';
-        initOrUpdateThree3D();
-        appendLog(`Vegetação / Copas 3D (Separada): ${state.show3DTrees ? 'Ativada' : 'Ocultada'}.`, 'info');
-      });
+      document.getElementById('chk3DTrees').addEventListener('change', (e) => toggleVegetationLayer(e.target.checked));
       document.getElementById('btnExportWatershedGeoJSON').addEventListener('click', exportWatershedGeoJSON);
       document.getElementById('btnExportWatershedShp').addEventListener('click', exportWatershedShapefileZip);
 
