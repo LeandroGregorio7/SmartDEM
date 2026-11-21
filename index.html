@@ -3806,89 +3806,196 @@ git push origin main</pre>
       window._threeSunMesh = sunGroup;
       threeScene.add(sunGroup);
 
-      // 1. OSM Buildings 3D Extrusion (Real Architectural Polygons — always clearly visible on top of DEM!)
+      // 1. High-Performance Batched 3D OSM Buildings (Up to 15,000 buildings in 1 GPU draw call!)
       if (window._threeBuildingsGroup) {
         threeScene.remove(window._threeBuildingsGroup);
+        window._threeBuildingsGroup.traverse((obj) => {
+          if (obj.geometry) obj.geometry.dispose();
+        });
         window._threeBuildingsGroup = null;
       }
       if (state.show3DBuildings && state.osmBuildings3D && state.osmBuildings3D.length > 0) {
         window._threeBuildingsGroup = new THREE.Group();
-        const wallMat = new THREE.MeshLambertMaterial({ color: 0xf5f5f4, side: THREE.DoubleSide });
-        const roofMat = new THREE.MeshLambertMaterial({ color: 0xe7e5e4, side: THREE.DoubleSide });
-        const edgeMat = new THREE.LineBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.72 });
+        const posList = [];
+        const normList = [];
+        const colList = [];
+
+        const pushTri = (ax, ay, az, bx, by, bz, cx, cy, cz, r, g, b) => {
+          const ux = bx - ax, uy = by - ay, uz = bz - az;
+          const vx = cx - ax, vy = cy - ay, vz = cz - az;
+          let nx = uy * vz - uz * vy;
+          let ny = uz * vx - ux * vz;
+          let nz = ux * vy - uy * vx;
+          const len = Math.hypot(nx, ny, nz) || 1;
+          nx /= len; ny /= len; nz /= len;
+          posList.push(ax, ay, az, bx, by, bz, cx, cy, cz);
+          normList.push(nx, ny, nz, nx, ny, nz, nx, ny, nz);
+          colList.push(r, g, b, r, g, b, r, g, b);
+        };
 
         for (const b of state.osmBuildings3D) {
+          if (!b.polyNorm || b.polyNorm.length < 3) continue;
           const gx = Math.min(N - 1, Math.max(0, Math.round(b.nx * (N - 1))));
           const gy = Math.min(N - 1, Math.max(0, Math.round(b.ny * (N - 1))));
           const zElev = state.grids.dtm2m[gy * N + gx];
           const normH = (zElev - minZ) / zSpan;
-          const groundY = normH * 14.0 * state.exaggeration3D - 4.0;
-          // Proportional architectural height: houses (~4-6m) stay clearly visible while tall towers rise higher
-          const hUnits = Math.max(1.3, (b.heightM / Math.max(30, zSpan)) * 16.0 * Math.max(1.1, state.exaggeration3D));
+          const groundY = normH * 14.0 * state.exaggeration3D - 4.0 + 0.1;
+          const hUnits = Math.max(1.2, (b.heightM / Math.max(30, zSpan)) * 16.0 * Math.max(1.1, state.exaggeration3D));
+          const topY = groundY + hUnits;
 
-          if (b.polyNorm && b.polyNorm.length >= 3) {
-            const shape = new THREE.Shape();
-            b.polyNorm.forEach(([px, py], idx) => {
-              const sx = (px - 0.5) * blockSize;
-              const sy = -(py - 0.5) * blockSize;
-              if (idx === 0) shape.moveTo(sx, sy);
-              else shape.lineTo(sx, sy);
-            });
-            shape.closePath();
-            const extrudeGeom = new THREE.ExtrudeGeometry(shape, { depth: hUnits, bevelEnabled: false });
-            extrudeGeom.rotateX(-Math.PI / 2);
-            const mesh = new THREE.Mesh(extrudeGeom, [roofMat, wallMat]);
-            mesh.position.y = groundY + 0.15;
-            window._threeBuildingsGroup.add(mesh);
+          const pts = b.polyNorm.map(([px, py]) => [(px - 0.5) * blockSize, (py - 0.5) * blockSize]);
+          const nPts = pts.length;
 
-            const edges = new THREE.LineSegments(new THREE.EdgesGeometry(extrudeGeom, 25), edgeMat);
-            edges.position.y = groundY + 0.15;
-            window._threeBuildingsGroup.add(edges);
+          // Subtle architectural shading: taller towers slightly cooler light-gray, residential houses warm off-white
+          const isTall = b.heightM > 12;
+          const wr = isTall ? 0.90 : 0.95, wg = isTall ? 0.91 : 0.93, wb = isTall ? 0.93 : 0.90;
+          const rr = isTall ? 0.80 : 0.84, rg = isTall ? 0.82 : 0.82, rb = isTall ? 0.85 : 0.79;
+
+          // Extrude side walls
+          for (let i = 0; i < nPts; i++) {
+            const [x0, z0] = pts[i];
+            const [x1, z1] = pts[(i + 1) % nPts];
+            pushTri(x0, groundY, z0, x1, groundY, z1, x1, topY, z1, wr, wg, wb);
+            pushTri(x0, groundY, z0, x1, topY, z1, x0, topY, z0, wr, wg, wb);
           }
+
+          // Roof fan triangulation
+          const [rx0, rz0] = pts[0];
+          for (let i = 1; i < nPts - 1; i++) {
+            const [rx1, rz1] = pts[i];
+            const [rx2, rz2] = pts[i + 1];
+            pushTri(rx0, topY, rz0, rx1, topY, rz1, rx2, topY, rz2, rr, rg, rb);
+          }
+        }
+
+        if (posList.length > 0) {
+          const mergedGeom = new THREE.BufferGeometry();
+          mergedGeom.setAttribute('position', new THREE.Float32BufferAttribute(posList, 3));
+          mergedGeom.setAttribute('normal', new THREE.Float32BufferAttribute(normList, 3));
+          mergedGeom.setAttribute('color', new THREE.Float32BufferAttribute(colList, 3));
+          const mergedMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+          window._threeBuildingsGroup.add(new THREE.Mesh(mergedGeom, mergedMat));
         }
         threeScene.add(window._threeBuildingsGroup);
       }
 
-      // 2. Real OSM High Vegetation / Forests / Parks 3D Extrusion (Zero fake cones!)
+      // 2. Spatially Balanced Natural 3D Tree Clusters via GPU InstancedMesh (Up to 4,000 trees in 2 draw calls!)
       if (window._threeTreesGroup) {
         threeScene.remove(window._threeTreesGroup);
+        window._threeTreesGroup.traverse((obj) => {
+          if (obj.geometry) obj.geometry.dispose();
+        });
         window._threeTreesGroup = null;
       }
       if (state.show3DTrees && state.osmVegetation3D && state.osmVegetation3D.length > 0) {
         window._threeTreesGroup = new THREE.Group();
-        const vegTopMat = new THREE.MeshLambertMaterial({ color: 0x2d6a4f, transparent: true, opacity: 0.92, side: THREE.DoubleSide });
-        const vegSideMat = new THREE.MeshLambertMaterial({ color: 0x1b4332, transparent: true, opacity: 0.92, side: THREE.DoubleSide });
 
-        for (const v of state.osmVegetation3D) {
-          const gx = Math.min(N - 1, Math.max(0, Math.round(v.nx * (N - 1))));
-          const gy = Math.min(N - 1, Math.max(0, Math.round(v.ny * (N - 1))));
-          const zElev = state.grids.dtm2m[gy * N + gx];
-          const normH = (zElev - minZ) / zSpan;
-          const groundY = normH * 14.0 * state.exaggeration3D - 4.0;
-          const hUnits = Math.max(2.0, (v.heightM / Math.max(25, zSpan)) * 16.0 * Math.max(1.1, state.exaggeration3D));
-
-          if (v.polyNorm && v.polyNorm.length >= 3) {
-            const shape = new THREE.Shape();
-            v.polyNorm.forEach(([px, py], idx) => {
-              const sx = (px - 0.5) * blockSize;
-              const sy = -(py - 0.5) * blockSize;
-              if (idx === 0) shape.moveTo(sx, sy);
-              else shape.lineTo(sx, sy);
-            });
-            shape.closePath();
-            const extrudeGeom = new THREE.ExtrudeGeometry(shape, { depth: hUnits, bevelEnabled: true, bevelThickness: 0.35, bevelSize: 0.25, bevelSegments: 2 });
-            extrudeGeom.rotateX(-Math.PI / 2);
-            const mesh = new THREE.Mesh(extrudeGeom, [vegTopMat, vegSideMat]);
-            mesh.position.y = groundY + 0.1;
-            window._threeTreesGroup.add(mesh);
-          } else {
-            // Individual OSM natural=tree point rendered as a soft organic canopy sphere
-            const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(1.1, 1), vegTopMat);
-            crown.position.set((v.nx - 0.5) * blockSize, groundY + hUnits * 0.65, (v.ny - 0.5) * blockSize);
-            window._threeTreesGroup.add(crown);
+        const pointInPoly = (x, y, poly) => {
+          let inside = false;
+          for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+            const xi = poly[i][0], yi = poly[i][1];
+            const xj = poly[j][0], yj = poly[j][1];
+            const intersect = ((yi > y) !== (yj > y)) && (x < ((xj - xi) * (y - yi)) / (yj - yi + 1e-9) + xi);
+            if (intersect) inside = !inside;
           }
+          return inside;
+        };
+
+        // Collect candidate trees per vegetation polygon/feature, then sample round-robin so ALL areas get trees evenly!
+        const perVegCandidates = [];
+        for (let vIdx = 0; vIdx < state.osmVegetation3D.length; vIdx++) {
+          const v = state.osmVegetation3D[vIdx];
+          const list = [];
+          if (v.polyNorm && v.polyNorm.length >= 3) {
+            let xMin = 1, xMax = 0, yMin = 1, yMax = 0;
+            for (const [px, py] of v.polyNorm) {
+              if (px < xMin) xMin = px; if (px > xMax) xMax = px;
+              if (py < yMin) yMin = py; if (py > yMax) yMax = py;
+            }
+            const stepG = 0.022;
+            let localSeed = vIdx * 17 + 3;
+            for (let py = yMin + stepG * 0.4; py <= yMax; py += stepG) {
+              for (let px = xMin + stepG * 0.4; px <= xMax; px += stepG) {
+                localSeed++;
+                const jx = px + (((localSeed * 19) % 100) / 100.0 - 0.5) * stepG * 0.75;
+                const jy = py + (((localSeed * 29) % 100) / 100.0 - 0.5) * stepG * 0.75;
+                if (jx > 0.01 && jx < 0.99 && jy > 0.01 && jy < 0.99 && pointInPoly(jx, jy, v.polyNorm)) {
+                  list.push({ nx: jx, ny: jy, h: v.heightM, seed: localSeed });
+                }
+              }
+            }
+          } else if (v.nx > 0.01 && v.nx < 0.99 && v.ny > 0.01 && v.ny < 0.99) {
+            list.push({ nx: v.nx, ny: v.ny, h: v.heightM, seed: vIdx * 13 + 7 });
+          }
+          if (list.length > 0) perVegCandidates.push(list);
         }
-        threeScene.add(window._threeTreesGroup);
+
+        const maxTrees3D = 4000;
+        const selectedTrees = [];
+        let tPtr = 0;
+        let tAdded = true;
+        while (tAdded && selectedTrees.length < maxTrees3D) {
+          tAdded = false;
+          for (const list of perVegCandidates) {
+            if (tPtr < list.length) {
+              selectedTrees.push(list[tPtr]);
+              tAdded = true;
+              if (selectedTrees.length >= maxTrees3D) break;
+            }
+          }
+          tPtr++;
+        }
+
+        if (selectedTrees.length > 0) {
+          const trunkGeom = new THREE.CylinderGeometry(0.14, 0.22, 1.0, 5);
+          const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5c4033 });
+          const crownGeom = new THREE.IcosahedronGeometry(1.0, 1);
+          const crownMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+
+          const trunkInst = new THREE.InstancedMesh(trunkGeom, trunkMat, selectedTrees.length);
+          const crownInst = new THREE.InstancedMesh(crownGeom, crownMat, selectedTrees.length);
+
+          const dummy = new THREE.Object3D();
+          const paletteHex = [0x2d6a4f, 0x40916c, 0x1b4332, 0x52796f];
+          const tmpColor = new THREE.Color();
+
+          selectedTrees.forEach((tr, i) => {
+            const gx = Math.min(N - 1, Math.max(0, Math.round(tr.nx * (N - 1))));
+            const gy = Math.min(N - 1, Math.max(0, Math.round(tr.ny * (N - 1))));
+            const zElev = state.grids.dtm2m[gy * N + gx];
+            const normH = (zElev - minZ) / zSpan;
+            const groundY = normH * 14.0 * state.exaggeration3D - 4.0;
+
+            const jitter = 0.78 + ((tr.seed * 37) % 45) / 100.0;
+            const hScale = Math.max(0.9, (tr.h / Math.max(30, zSpan)) * 11.5 * Math.max(1.0, state.exaggeration3D)) * jitter;
+            const rScale = Math.max(0.55, hScale * 0.58);
+            const xW = (tr.nx - 0.5) * blockSize;
+            const zW = (tr.ny - 0.5) * blockSize;
+
+            dummy.position.set(xW, groundY + hScale * 0.22, zW);
+            dummy.scale.set(1.0, hScale * 0.45, 1.0);
+            dummy.rotation.set(0, 0, 0);
+            dummy.updateMatrix();
+            trunkInst.setMatrixAt(i, dummy.matrix);
+
+            dummy.position.set(xW, groundY + hScale * 0.68, zW);
+            dummy.scale.set(rScale, hScale * 0.52, rScale * 0.92);
+            dummy.rotation.set(0, (tr.seed % 6), 0);
+            dummy.updateMatrix();
+            crownInst.setMatrixAt(i, dummy.matrix);
+
+            tmpColor.setHex(paletteHex[tr.seed % paletteHex.length]);
+            crownInst.setColorAt(i, tmpColor);
+          });
+
+          trunkInst.instanceMatrix.needsUpdate = true;
+          crownInst.instanceMatrix.needsUpdate = true;
+          if (crownInst.instanceColor) crownInst.instanceColor.needsUpdate = true;
+
+          window._threeTreesGroup.add(trunkInst);
+          window._threeTreesGroup.add(crownInst);
+          threeScene.add(window._threeTreesGroup);
+        }
       }
 
       updateCamera3D();
@@ -5615,24 +5722,6 @@ git push origin main</pre>
         showToast('MDT 2m (Solo Nu) gerado sem interferência de prédios!');
       };
 
-      const runSeparateMDS = async () => {
-        document.getElementById('btnRunDEM').classList.remove('ring-2', 'ring-amber-300', 'animate-pulse');
-        state.hasProcessed = true;
-        state.renderLayer = 'mds2m';
-        state.show3DTrees = true;
-        state.show3DBuildings = true;
-        document.getElementById('selectRenderLayer').value = 'mds2m';
-        document.getElementById('chk3DTrees').checked = true;
-        document.getElementById('chk3DBuildings').checked = true;
-        document.getElementById('btnRunMDS').className = 'py-2.5 px-3 rounded-lg font-bold bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-lg flex items-center justify-center gap-1.5 transition';
-        document.getElementById('btnRunDEM').className = 'py-2.5 px-3 rounded-lg font-bold bg-slate-800 hover:bg-sky-500/25 text-sky-300 border border-sky-500/50 flex items-center justify-center gap-1.5 transition';
-        document.getElementById('statusDot').className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse';
-        appendLog('=== MODO MDS 2m (SUPERFÍCIE: COPAS CONTÍNUAS + PRÉDIOS OSM) ACIONADO ===', 'info');
-        await fetchRealOSMBuildingPolygons();
-        await fetchRealCloudTilesAndRunSR();
-        showToast('MDS 2m gerado (Copas Contínuas + Polígonos Reais de Prédios OSM)!');
-      };
-
       document.getElementById('btnRunDEM').addEventListener('click', runSeparateDEM);
       document.getElementById('btnRunSR').addEventListener('click', runSeparateDEM);
 
@@ -5709,8 +5798,8 @@ git push origin main</pre>
           const zB = 15;
           const bMin = lonLatToTile(wLon, nLat, zB);
           const bMax = lonLatToTile(eLon, sLat, zB);
-          const bxCount = Math.min(7, Math.max(1, bMax.x - bMin.x + 1));
-          const byCount = Math.min(7, Math.max(1, bMax.y - bMin.y + 1));
+          const bxCount = Math.min(9, Math.max(1, bMax.x - bMin.x + 1));
+          const byCount = Math.min(9, Math.max(1, bMax.y - bMin.y + 1));
           const reqs = [];
           for (let dy = 0; dy < byCount; dy++) {
             for (let dx = 0; dx < bxCount; dx++) {
@@ -5723,8 +5812,11 @@ git push origin main</pre>
             }
           }
           const tileResults = await Promise.all(reqs);
-          for (const fc of tileResults) {
-            if (!fc || !fc.features) continue;
+          const validFcs = tileResults.filter((fc) => fc && Array.isArray(fc.features) && fc.features.length > 0);
+          // Filter features inside AOI per tile first, then sample round-robin across ALL tiles
+          // so houses in the southern half (Lago Sul) load equally alongside dense towers in the northern half!
+          const perTileLists = validFcs.map((fc) => {
+            const list = [];
             for (const feat of fc.features) {
               if (!feat.geometry || feat.geometry.type !== 'Polygon') continue;
               const ring = feat.geometry.coordinates[0];
@@ -5739,13 +5831,27 @@ git push origin main</pre>
               });
               const nx = sumX / polyNorm.length;
               const ny = sumY / polyNorm.length;
-              if (nx < 0.01 || nx > 0.99 || ny < 0.01 || ny > 0.99) continue;
+              if (nx < 0.005 || nx > 0.995 || ny < 0.005 || ny > 0.995) continue;
               const props = feat.properties || {};
               const hM = parseFloat(props.height) || (parseFloat(props.levels) || 1.5) * 3.2;
-              blds.push({ nx, ny, polyNorm, heightM: hM, name: props.name || 'OSM Building' });
-              if (blds.length >= 3000) break;
+              list.push({ nx, ny, polyNorm, heightM: hM, name: props.name || 'OSM Building' });
             }
-            if (blds.length >= 3000) break;
+            return list;
+          });
+
+          const maxTotalBlds = 15000;
+          let ptr = 0;
+          let added = true;
+          while (added && blds.length < maxTotalBlds) {
+            added = false;
+            for (const list of perTileLists) {
+              if (ptr < list.length) {
+                blds.push(list[ptr]);
+                added = true;
+                if (blds.length >= maxTotalBlds) break;
+              }
+            }
+            ptr++;
           }
         } catch (err) {
           console.warn('OSM Buildings tile fetch note:', err);
@@ -5809,14 +5915,14 @@ git push origin main</pre>
           'https://overpass.kumi.systems/api/interpreter',
           'https://lz4.overpass-api.de/api/interpreter'
         ];
-        const q = `[out:json][timeout:18];(way["natural"~"wood|tree_row"](${sLat},${wLon},${nLat},${eLon});way["landuse"="forest"](${sLat},${wLon},${nLat},${eLon});way["leisure"="park"](${sLat},${wLon},${nLat},${eLon});node["natural"="tree"](${sLat},${wLon},${nLat},${eLon}););out body geom 400;`;
+        const q = `[out:json][timeout:18];(way["natural"~"wood|tree_row"](${sLat},${wLon},${nLat},${eLon});way["landuse"="forest"](${sLat},${wLon},${nLat},${eLon});way["leisure"="park"](${sLat},${wLon},${nLat},${eLon});node["natural"="tree"](${sLat},${wLon},${nLat},${eLon}););out body geom 1500;`;
 
         for (const endpoint of mirrors) {
           try {
             const resp = await fetch(endpoint + '?data=' + encodeURIComponent(q));
             if (!resp.ok) continue;
             const json = await resp.json();
-            for (const el of (json.elements || []).slice(0, 400)) {
+            for (const el of (json.elements || []).slice(0, 1500)) {
               const tags = el.tags || {};
               const vClass = tags.natural || tags.landuse || tags.leisure || 'vegetation';
               const hM = parseFloat(tags.height) || (vClass === 'forest' || vClass === 'wood' ? 11.0 : vClass === 'tree' ? 8.0 : 6.5);
