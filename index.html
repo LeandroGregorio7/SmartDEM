@@ -3947,17 +3947,34 @@ git push origin main</pre>
         }
 
         if (selectedTrees.length > 0) {
-          const trunkGeom = new THREE.CylinderGeometry(0.14, 0.22, 1.0, 5);
-          const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5c4033 });
-          const crownGeom = new THREE.IcosahedronGeometry(1.0, 1);
-          const crownMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+          // Google Earth-style organic satellite-colored canopy foliage (NO SimCity trunks or plastic balls!)
+          // Sample real RGB foliage color directly from the satellite basemap at each tree's exact (nx, ny)
+          let vegSatPx = null;
+          const vS = 128;
+          if (state.realBasemapCanvas) {
+            const vc = document.createElement('canvas');
+            vc.width = vS;
+            vc.height = vS;
+            vc.getContext('2d').drawImage(state.realBasemapCanvas, 0, 0, vS, vS);
+            vegSatPx = vc.getContext('2d').getImageData(0, 0, vS, vS).data;
+          }
 
-          const trunkInst = new THREE.InstancedMesh(trunkGeom, trunkMat, selectedTrees.length);
+          // Smooth organic irregular foliage cluster geometry (subtle vertex noise)
+          const crownGeom = new THREE.DodecahedronGeometry(0.62, 1);
+          const gPos = crownGeom.attributes.position;
+          for (let k = 0; k < gPos.count; k++) {
+            const vx = gPos.getX(k), vy = gPos.getY(k), vz = gPos.getZ(k);
+            const n = 0.86 + 0.28 * Math.sin(vx * 5.1 + vz * 4.3) * Math.cos(vy * 3.7);
+            gPos.setXYZ(k, vx * n, vy * n * 0.68, vz * n);
+          }
+          crownGeom.computeVertexNormals();
+
+          const crownMat = new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: false });
           const crownInst = new THREE.InstancedMesh(crownGeom, crownMat, selectedTrees.length);
 
           const dummy = new THREE.Object3D();
-          const paletteHex = [0x2d6a4f, 0x40916c, 0x1b4332, 0x52796f];
           const tmpColor = new THREE.Color();
+          const fallbackGreens = [0x344e41, 0x3a5a40, 0x2f4839, 0x415a42];
 
           selectedTrees.forEach((tr, i) => {
             const gx = Math.min(N - 1, Math.max(0, Math.round(tr.nx * (N - 1))));
@@ -3966,33 +3983,37 @@ git push origin main</pre>
             const normH = (zElev - minZ) / zSpan;
             const groundY = normH * 14.0 * state.exaggeration3D - 4.0;
 
-            const jitter = 0.78 + ((tr.seed * 37) % 45) / 100.0;
-            const hScale = Math.max(0.9, (tr.h / Math.max(30, zSpan)) * 11.5 * Math.max(1.0, state.exaggeration3D)) * jitter;
-            const rScale = Math.max(0.55, hScale * 0.58);
+            // Realistic canopy scale proportional to residential houses (low, organic, seated flush on terrain)
+            const jitter = 0.72 + ((tr.seed * 37) % 55) / 100.0;
+            const hScale = Math.max(0.45, Math.min(1.65, (tr.h / Math.max(35, zSpan)) * 9.0 * Math.max(0.9, state.exaggeration3D))) * jitter;
+            const rScale = Math.max(0.42, hScale * 0.95);
             const xW = (tr.nx - 0.5) * blockSize;
             const zW = (tr.ny - 0.5) * blockSize;
 
-            dummy.position.set(xW, groundY + hScale * 0.22, zW);
-            dummy.scale.set(1.0, hScale * 0.45, 1.0);
-            dummy.rotation.set(0, 0, 0);
-            dummy.updateMatrix();
-            trunkInst.setMatrixAt(i, dummy.matrix);
-
-            dummy.position.set(xW, groundY + hScale * 0.68, zW);
-            dummy.scale.set(rScale, hScale * 0.52, rScale * 0.92);
-            dummy.rotation.set(0, (tr.seed % 6), 0);
+            dummy.position.set(xW, groundY + hScale * 0.26, zW);
+            dummy.scale.set(rScale, hScale * 0.78, rScale * (0.85 + (tr.seed % 3) * 0.12));
+            dummy.rotation.set(0, (tr.seed * 1.17) % 6.28, 0);
             dummy.updateMatrix();
             crownInst.setMatrixAt(i, dummy.matrix);
 
-            tmpColor.setHex(paletteHex[tr.seed % paletteHex.length]);
+            // Sample real satellite canopy tone so vegetation blends naturally into the orthoimagery
+            if (vegSatPx) {
+              const sx = Math.min(vS - 1, Math.max(0, Math.round(tr.nx * (vS - 1))));
+              const sy = Math.min(vS - 1, Math.max(0, Math.round(tr.ny * (vS - 1))));
+              const p = (sy * vS + sx) * 4;
+              const sr = Math.min(130, Math.max(28, vegSatPx[p] * 0.85));
+              const sg = Math.min(155, Math.max(46, vegSatPx[p + 1] * 0.95));
+              const sb = Math.min(115, Math.max(26, vegSatPx[p + 2] * 0.82));
+              tmpColor.setRGB(sr / 255.0, sg / 255.0, sb / 255.0);
+            } else {
+              tmpColor.setHex(fallbackGreens[tr.seed % fallbackGreens.length]);
+            }
             crownInst.setColorAt(i, tmpColor);
           });
 
-          trunkInst.instanceMatrix.needsUpdate = true;
           crownInst.instanceMatrix.needsUpdate = true;
           if (crownInst.instanceColor) crownInst.instanceColor.needsUpdate = true;
 
-          window._threeTreesGroup.add(trunkInst);
           window._threeTreesGroup.add(crownInst);
           threeScene.add(window._threeTreesGroup);
         }
@@ -5905,27 +5926,33 @@ git push origin main</pre>
         initOrUpdateThree3D();
       };
 
-      // Fetch Real High Vegetation / Forests / Parks / Trees (Overpass OSM + Optical Canopy Patch Fallback!)
+      // Fast High Vegetation / Trees Loader (4.5s Overpass Timeout + Instant Calibrated Satellite Canopy Extraction!)
       const fetchRealOSMVegetation = async () => {
         const [[sLat, wLon], [nLat, eLon]] = getActiveBounds();
-        appendLog('Consultando vegetação alta, matas e árvores no OpenStreetMap...', 'info');
+        const vBdg = document.getElementById('badgeVegStatus');
+        if (vBdg) vBdg.textContent = '...';
+        appendLog('Buscando vegetação alta e árvores (OpenStreetMap + Análise de Dossel Óptico)...', 'info');
         const vegList = [];
+
+        // 1. Fast Overpass attempt with strict 4.5s AbortController timeout (never hangs for 60s!)
         const mirrors = [
           'https://overpass-api.de/api/interpreter',
-          'https://overpass.kumi.systems/api/interpreter',
-          'https://lz4.overpass-api.de/api/interpreter'
+          'https://overpass.kumi.systems/api/interpreter'
         ];
-        const q = `[out:json][timeout:18];(way["natural"~"wood|tree_row"](${sLat},${wLon},${nLat},${eLon});way["landuse"="forest"](${sLat},${wLon},${nLat},${eLon});way["leisure"="park"](${sLat},${wLon},${nLat},${eLon});node["natural"="tree"](${sLat},${wLon},${nLat},${eLon}););out body geom 1500;`;
+        const q = `[out:json][timeout:6];(way["natural"~"wood|tree_row"](${sLat},${wLon},${nLat},${eLon});way["landuse"="forest"](${sLat},${wLon},${nLat},${eLon});way["leisure"="park"](${sLat},${wLon},${nLat},${eLon});node["natural"="tree"](${sLat},${wLon},${nLat},${eLon}););out body geom 600;`;
 
         for (const endpoint of mirrors) {
           try {
-            const resp = await fetch(endpoint + '?data=' + encodeURIComponent(q));
+            const ctrl = new AbortController();
+            const tId = setTimeout(() => ctrl.abort(), 4500);
+            const resp = await fetch(endpoint + '?data=' + encodeURIComponent(q), { signal: ctrl.signal });
+            clearTimeout(tId);
             if (!resp.ok) continue;
             const json = await resp.json();
-            for (const el of (json.elements || []).slice(0, 1500)) {
+            for (const el of (json.elements || []).slice(0, 600)) {
               const tags = el.tags || {};
               const vClass = tags.natural || tags.landuse || tags.leisure || 'vegetation';
-              const hM = parseFloat(tags.height) || (vClass === 'forest' || vClass === 'wood' ? 11.0 : vClass === 'tree' ? 8.0 : 6.5);
+              const hM = parseFloat(tags.height) || (vClass === 'forest' || vClass === 'wood' ? 11.5 : vClass === 'tree' ? 8.5 : 7.0);
               if (el.type === 'way' && el.geometry && el.geometry.length >= 3) {
                 let sumX = 0, sumY = 0;
                 const polyNorm = el.geometry.map((pt) => {
@@ -5946,13 +5973,15 @@ git push origin main</pre>
                 vegList.push({ nx, ny, polyNorm: null, heightM: hM, vegClass: 'tree', name: tags.species || 'Árvore OSM' });
               }
             }
-            if (vegList.length > 0) break;
-          } catch (e) {}
+            if (vegList.length >= 15) break;
+          } catch (e) {
+            // Timeout or rate-limit: move immediately to next mirror / optical canopy extractor
+          }
         }
 
-        // Optical Canopy Patch Extraction Fallback (when OSM has no mapped trees/woods or Overpass throttles)
-        if (vegList.length === 0 && state.realBasemapCanvas) {
-          const G = 42;
+        // 2. Calibrated Optical Satellite Canopy Extractor (Cerrado/Tropical/Urban green trees, excludes water & bright roofs)
+        if (vegList.length < 20 && state.realBasemapCanvas) {
+          const G = 64;
           const sc = document.createElement('canvas');
           sc.width = G;
           sc.height = G;
@@ -5964,18 +5993,20 @@ git push origin main</pre>
             for (let x = 1; x < G - 1; x++) {
               const p = (y * G + x) * 4;
               const r = px[p], g = px[p + 1], b = px[p + 2];
-              const exg = (2 * g - r - b) / 255.0;
-              const greenRatio = (g - r) / Math.max(1, g + r);
-              if (exg > 0.05 && greenRatio > 0.03 && g > 38 && g < 165) {
+              const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+              // Detect real dark/olive-green tree canopies while excluding dark blue water (b >= g - 3) & bright roofs (lum > 140)
+              const isGreenCanopy = (g > r + 2) && (g > b + 6) && (g >= 28) && (g <= 145) && (lum <= 135);
+              if (isGreenCanopy) {
                 const nx = x / (G - 1);
                 const ny = y / (G - 1);
-                const rad = 0.014;
+                const rad = 0.011;
                 const polyNorm = [];
                 for (let k = 0; k < 6; k++) {
                   const a = (k / 6) * Math.PI * 2;
                   polyNorm.push([nx + rad * Math.cos(a), ny + rad * Math.sin(a)]);
                 }
-                const estH = Math.min(16.0, 5.5 + exg * 28.0);
+                const exg = (2 * g - r - b) / 255.0;
+                const estH = Math.min(15.0, 6.0 + Math.max(0, exg) * 35.0);
                 vegList.push({
                   nx,
                   ny,
@@ -5984,19 +6015,17 @@ git push origin main</pre>
                   vegClass: 'canopy_optical',
                   name: 'Maciço Arbóreo (Satélite)'
                 });
-                if (vegList.length >= 260) break;
+                if (vegList.length >= 650) break;
               }
             }
-            if (vegList.length >= 260) break;
+            if (vegList.length >= 650) break;
           }
-          appendLog(`Overpass sem polígonos florestais na área — extraídos ${vegList.length} maciços arbóreos reais da imagem de satélite!`, 'ok');
-        } else {
-          appendLog(`${vegList.length} feições reais de vegetação alta/árvores carregadas do OpenStreetMap!`, vegList.length > 0 ? 'ok' : 'warn');
         }
 
         state.osmVegetation3D = vegList;
-        const vBdg = document.getElementById('badgeVegStatus');
         if (vBdg) vBdg.textContent = `${vegList.length}`;
+        appendLog(`${vegList.length} maciços arbóreos / árvores carregados na AOI!`, vegList.length > 0 ? 'ok' : 'warn');
+        if (vegList.length > 0) showToast(`Vegetação carregada: ${vegList.length} maciços/árvores!`);
       };
 
       // Shared Polygon GeoJSON & Shapefile (.zip) Exporter for Buildings & Vegetation
