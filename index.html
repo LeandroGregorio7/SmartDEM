@@ -253,9 +253,9 @@
         <!-- 2D Leaflet Map Container -->
         <div id="leafletMap" class="relative"></div>
 
-        <!-- 3D WebGL Volumetric Landscape Container -->
-        <div id="threeContainer" class="hidden" style="background: linear-gradient(180deg, #0c192c 0%, #1d4e89 58%, #38bdf8 100%);">
-          <!-- Top-Right 3D Quick Actions: Back to 2D + Export 3D PNG + 3D Buildings -->
+        <!-- 3D WebGL Volumetric Landscape Container (Daytime Sky + Clouds + Sun + Aligned Surroundings) -->
+        <div id="threeContainer" class="hidden" style="background: linear-gradient(180deg, #1d6fb8 0%, #60a5fa 52%, #dbeafe 100%);">
+          <!-- Top-Right 3D Quick Actions: Back to 2D + Export 3D PNG -->
           <div class="absolute top-3 right-3 z-20 flex flex-wrap items-center gap-2">
             <button id="btnExport3DPNG" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg flex items-center gap-1.5 transition">
               <i data-lucide="camera" class="w-3.5 h-3.5"></i>
@@ -267,12 +267,17 @@
             </button>
           </div>
 
-          <!-- Top-Left 3D Texture, Fusion & Buildings HUD -->
-          <div class="absolute top-3 left-3 z-20 bg-slate-950/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs space-y-2 backdrop-blur max-w-[270px] shadow-xl">
+          <!-- Top-Left 3D Controls HUD -->
+          <div class="absolute top-3 left-3 z-20 bg-slate-950/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs space-y-2 backdrop-blur max-w-[275px] shadow-xl">
             <div class="font-semibold text-sky-300 flex items-center justify-between gap-2">
-              <span class="flex items-center gap-1.5"><i data-lucide="box" class="w-3.5 h-3.5"></i> <span data-i18n="threeTitle">Paisagem 3D Volumétrica (2m)</span></span>
+              <span class="flex items-center gap-1.5"><i data-lucide="sun" class="w-3.5 h-3.5 text-amber-300"></i> <span data-i18n="threeTitle">Paisagem 3D (OSM Buildings + 2m)</span></span>
             </div>
-            <p class="text-[10px] text-slate-400" data-i18n="threeHint">Arraste p/ rotacionar | Scroll p/ zoom | Norte &uarr;</p>
+
+            <!-- Explicit MDT vs MDS 3D Terrain Mode -->
+            <div class="grid grid-cols-2 gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-[11px]">
+              <button id="btn3DModeMDT" class="py-1 px-2 rounded font-bold bg-sky-500 text-slate-950 transition">MDT (Solo Nu)</button>
+              <button id="btn3DModeMDS" class="py-1 px-2 rounded font-semibold text-slate-300 hover:text-white transition">MDS (Superfície)</button>
+            </div>
 
             <div class="space-y-1.5 pt-1 border-t border-slate-800">
               <div>
@@ -288,9 +293,9 @@
               <div>
                 <div class="flex justify-between text-[10px] mb-0.5">
                   <span class="text-slate-300" data-i18n="lbl3DFusion">Fusão Base vs Paleta:</span>
-                  <span id="val3DFusion" class="mono text-emerald-300">55% Base</span>
+                  <span id="val3DFusion" class="mono text-emerald-300">65% Base</span>
                 </div>
-                <input id="slider3DFusion" type="range" min="0" max="100" value="55" class="w-full h-1.5 bg-slate-700 rounded cursor-pointer" />
+                <input id="slider3DFusion" type="range" min="0" max="100" value="65" class="w-full h-1.5 bg-slate-700 rounded cursor-pointer" />
               </div>
 
               <div>
@@ -301,17 +306,26 @@
                 <input id="sliderExaggeration" type="range" min="10" max="60" value="20" class="w-full h-1.5 bg-slate-700 rounded cursor-pointer" />
               </div>
 
-              <div class="pt-1 border-t border-slate-800 space-y-1.5">
-                <label class="flex items-center gap-1.5 text-[11px] text-amber-300 cursor-pointer">
-                  <input id="chk3DBuildings" type="checkbox" class="rounded border-slate-600 text-amber-500 bg-slate-900" />
-                  <span data-i18n="chk3DBuildings">Prédios 3D Reais (Polígonos OSM)</span>
+              <!-- Separate Layers: Only Buildings (OSM Buildings) & Only Vegetation (Canopy) -->
+              <div class="pt-1.5 border-t border-slate-800 space-y-1.5">
+                <label class="flex items-center justify-between text-[11px] text-amber-300 cursor-pointer">
+                  <span class="flex items-center gap-1.5">
+                    <input id="chk3DBuildings" type="checkbox" class="rounded border-slate-600 text-amber-500 bg-slate-900" />
+                    <span data-i18n="chk3DBuildings">Edificações 3D (OSM Buildings)</span>
+                  </span>
+                  <span id="badgeBldCount" class="mono text-[9px] text-slate-400">0</span>
                 </label>
-                <label class="flex items-center gap-1.5 text-[11px] text-emerald-300 cursor-pointer">
-                  <input id="chk3DTrees" type="checkbox" class="rounded border-slate-600 text-emerald-500 bg-slate-900" />
-                  <span data-i18n="chk3DTrees">Superfície Contínua MDS (Copas/CHM)</span>
+
+                <label class="flex items-center justify-between text-[11px] text-emerald-300 cursor-pointer">
+                  <span class="flex items-center gap-1.5">
+                    <input id="chk3DTrees" type="checkbox" class="rounded border-slate-600 text-emerald-500 bg-slate-900" />
+                    <span data-i18n="chk3DTrees">Vegetação / Copas 3D (Separada)</span>
+                  </span>
+                  <span id="badgeVegStatus" class="mono text-[9px] text-slate-400">OFF</span>
                 </label>
+
                 <button id="btnExport3DBuildings" class="w-full py-1 px-2 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-[10px] font-medium transition">
-                  <span data-i18n="btnExpBuildings">Exportar Prédios/MDS (.geojson)</span>
+                  <span data-i18n="btnExpBuildings">Exportar Prédios 3D (.geojson)</span>
                 </button>
               </div>
             </div>
@@ -1352,7 +1366,7 @@ git push origin main</pre>
       exaggeration3D: 2.0,
       roughness: 0.25,
       texture3DMode: 'fusion',
-      fusion3DBaseRatio: 0.55,
+      fusion3DBaseRatio: 0.65,
       activeBasemap: 'sat',
       compareMode: '2m',
       measurePoints: [],
@@ -1362,6 +1376,7 @@ git push origin main</pre>
       realBaseDem30m: null,
       realOpticalEdge: null,
       realBasemapCanvas: null,
+      realSurroundCanvas: null,
       renderLayer: 'dtm2m',       // dtm2m | slope2m | aspect2m | insolation2m | dsm30m | tobler2m
       palette: 'terrain',         // terrain | turbo | viridis | magma | rdylgn | aspect_hsv | grayscale
       elevUnit: 'm',              // m | ft
@@ -1830,6 +1845,50 @@ git push origin main</pre>
         const tCtx = texCanvas.getContext('2d');
         tCtx.drawImage(baseCanvas, sx0, sy0, Math.max(10, sx1 - sx0), Math.max(10, sy1 - sy0), 0, 0, texCanvas.width, texCanvas.height);
         state.realBasemapCanvas = texCanvas;
+
+        // Also capture the TRUE 3x expanded surrounding geographic context (centered identically on the AOI)
+        // so the 3D apron aligns pixel-for-pixel with the 2D map position!
+        try {
+          const dLon = eLon - wLon;
+          const dLat = nLat - sLat;
+          const sW = wLon - dLon, sE = eLon + dLon;
+          const sS = sLat - dLat, sN = nLat + dLat;
+          let surZoom = Math.max(8, imgZoom - 1);
+          let stMin = lonLatToTile(sW, sN, surZoom);
+          let stMax = lonLatToTile(sE, sS, surZoom);
+          while (surZoom > 7 && ((stMax.x - stMin.x + 1) > 5 || (stMax.y - stMin.y + 1) > 5)) {
+            surZoom--;
+            stMin = lonLatToTile(sW, sN, surZoom);
+            stMax = lonLatToTile(sE, sS, surZoom);
+          }
+          const stx = Math.max(1, stMax.x - stMin.x + 1);
+          const sty = Math.max(1, stMax.y - stMin.y + 1);
+          const surStitch = document.createElement('canvas');
+          surStitch.width = stx * 256;
+          surStitch.height = sty * 256;
+          const sCtx2 = surStitch.getContext('2d');
+          const surReqs = [];
+          for (let dy = 0; dy < sty; dy++) {
+            for (let dx = 0; dx < stx; dx++) {
+              const url = `https://server.arcgisonline.com/ArcGIS/rest/services/${svc}/MapServer/tile/${surZoom}/${stMin.y + dy}/${stMin.x + dx}`;
+              surReqs.push(loadCrossOriginImage(url).then((img) => sCtx2.drawImage(img, dx * 256, dy * 256)).catch(() => {}));
+            }
+          }
+          await Promise.all(surReqs);
+          const stlB = tileToLonLatBounds(stMin.x, stMin.y, surZoom);
+          const sbrB = tileToLonLatBounds(stMin.x + stx - 1, stMin.y + sty - 1, surZoom);
+          const cx0 = ((sW - stlB.wLon) / (sbrB.eLon - stlB.wLon)) * surStitch.width;
+          const cy0 = ((stlB.nLat - sN) / (stlB.nLat - sbrB.sLat)) * surStitch.height;
+          const cw = ((sE - sW) / (sbrB.eLon - stlB.wLon)) * surStitch.width;
+          const ch = ((sN - sS) / (stlB.nLat - sbrB.sLat)) * surStitch.height;
+          const surCrop = document.createElement('canvas');
+          surCrop.width = 768;
+          surCrop.height = 768;
+          surCrop.getContext('2d').drawImage(surStitch, cx0, cy0, Math.max(10, cw), Math.max(10, ch), 0, 0, 768, 768);
+          state.realSurroundCanvas = surCrop;
+        } catch (eSur) {
+          state.realSurroundCanvas = texCanvas;
+        }
 
         const texSample = document.createElement('canvas');
         texSample.width = N;
@@ -3113,6 +3172,7 @@ git push origin main</pre>
     function applyDrawnAOI(bounds, polyLatLngs) {
       state.customBounds = bounds;
       state.customPolygonLatLngs = polyLatLngs;
+      state.osmBuildings3D = [];
       state.aoiReady = true;
       state.hasProcessed = false;
       exitDrawMode();
@@ -3496,17 +3556,31 @@ git push origin main</pre>
         fillLight.position.set(-90, 60, -80);
         threeScene.add(fillLight);
 
-        // Extended Surrounding Landscape Apron (textured with active basemap for AR-style context)
-        const apronGeom = new THREE.PlaneGeometry(420, 420, 16, 16);
+        // Exact 3x3 Geographically Aligned Surrounding Landscape (3 * 120 = 360 units)
+        const apronGeom = new THREE.PlaneGeometry(360, 360, 4, 4);
         apronGeom.rotateX(-Math.PI / 2);
-        const apronMat = new THREE.MeshLambertMaterial({ color: 0x1e293b, side: THREE.DoubleSide });
+        const apronMat = new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide });
         window._threeApronMesh = new THREE.Mesh(apronGeom, apronMat);
-        window._threeApronMesh.position.y = -16.2;
+        window._threeApronMesh.position.y = -4.2;
         threeScene.add(window._threeApronMesh);
 
-        const gridHelper = new THREE.GridHelper(440, 32, 0x38bdf8, 0x1e293b);
-        gridHelper.position.y = -16.0;
-        threeScene.add(gridHelper);
+        // Soft Volumetric Daytime 3D Clouds floating in the sky
+        const cloudGroup = new THREE.Group();
+        const cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.82 });
+        const cloudClusters = [
+          [-95, 74, -110, 1.3], [85, 82, -125, 1.5], [-30, 78, -145, 1.2],
+          [115, 70, -55, 1.1], [-120, 72, 20, 1.0]
+        ];
+        for (const [cx, cy, cz, sc] of cloudClusters) {
+          const puffs = [[0, 0, 0, 12], [11, -1, 3, 9], [-11, -2, -2, 10], [5, 4, -3, 8]];
+          for (const [px, py, pz, r] of puffs) {
+            const puff = new THREE.Mesh(new THREE.SphereGeometry(r * sc, 10, 8), cloudMat);
+            puff.scale.set(1.4, 0.55, 1.0);
+            puff.position.set(cx + px * sc, cy + py * sc, cz + pz * sc);
+            cloudGroup.add(puff);
+          }
+        }
+        threeScene.add(cloudGroup);
 
         canvas.addEventListener('mousedown', (e) => {
           isDragging3D = true;
@@ -3657,46 +3731,43 @@ git push origin main</pre>
 
       threeScene.add(threeSkirtGroup);
 
-      // Drape the active basemap texture onto the surrounding 3D landscape apron
-      if (window._threeApronMesh && state.realBasemapCanvas) {
-        const apronTex = new THREE.CanvasTexture(state.realBasemapCanvas);
-        apronTex.wrapS = THREE.MirroredRepeatWrapping;
-        apronTex.wrapT = THREE.MirroredRepeatWrapping;
-        apronTex.repeat.set(3, 3);
+      // Map the TRUE 3x3 geographic surrounding basemap 1:1 onto the 360x360 apron (zero displacement from 2D!)
+      if (window._threeApronMesh && (state.realSurroundCanvas || state.realBasemapCanvas)) {
+        const apronTex = new THREE.CanvasTexture(state.realSurroundCanvas || state.realBasemapCanvas);
+        apronTex.needsUpdate = true;
         window._threeApronMesh.material.map = apronTex;
-        window._threeApronMesh.material.color.setHex(0x94a3b8);
+        window._threeApronMesh.material.color.setHex(0xdbeafe);
         window._threeApronMesh.material.needsUpdate = true;
       }
 
-      // Dynamic Sun Sphere in the Sky matching Solar Azimuth & Altitude
+      // Daytime Sun Sphere + Warm Halo matching Solar Azimuth & Altitude
       if (window._threeSunMesh) threeScene.remove(window._threeSunMesh);
+      const sunGroup = new THREE.Group();
       const sunAz = (state.sunAzimuth * Math.PI) / 180.0;
       const sunAlt = (state.sunAltitude * Math.PI) / 180.0;
-      const sunDist = 165;
-      const sunGeom = new THREE.SphereGeometry(5.5, 16, 16);
-      const sunMat = new THREE.MeshBasicMaterial({ color: 0xfde047 });
-      window._threeSunMesh = new THREE.Mesh(sunGeom, sunMat);
-      window._threeSunMesh.position.set(
+      const sunDist = 175;
+      const sunCore = new THREE.Mesh(new THREE.SphereGeometry(6.5, 16, 16), new THREE.MeshBasicMaterial({ color: 0xfef08a }));
+      const sunHalo = new THREE.Mesh(new THREE.SphereGeometry(11.5, 16, 16), new THREE.MeshBasicMaterial({ color: 0xfde047, transparent: true, opacity: 0.28 }));
+      sunGroup.add(sunCore);
+      sunGroup.add(sunHalo);
+      sunGroup.position.set(
         sunDist * Math.cos(sunAlt) * Math.sin(sunAz),
-        Math.max(12, sunDist * Math.sin(sunAlt)),
+        Math.max(24, sunDist * Math.sin(sunAlt)),
         -sunDist * Math.cos(sunAlt) * Math.cos(sunAz)
       );
-      threeScene.add(window._threeSunMesh);
+      window._threeSunMesh = sunGroup;
+      threeScene.add(sunGroup);
 
-      // Real 3D Architectural Building Footprints Extrusion (THREE.ExtrudeGeometry from OSM Polygons)
+      // 1. OSM Buildings-Style 3D Extrusion (Independent "Edificações 3D" layer)
       if (window._threeBuildingsGroup) {
         threeScene.remove(window._threeBuildingsGroup);
         window._threeBuildingsGroup = null;
       }
-      if (window._threeTreesGroup) {
-        threeScene.remove(window._threeTreesGroup);
-        window._threeTreesGroup = null;
-      }
-
       if (state.show3DBuildings && state.osmBuildings3D && state.osmBuildings3D.length > 0) {
         window._threeBuildingsGroup = new THREE.Group();
-        const wallMat = new THREE.MeshLambertMaterial({ color: 0xe2e8f0 });
-        const roofMat = new THREE.MeshLambertMaterial({ color: 0xcbd5e1 });
+        const wallMat = new THREE.MeshLambertMaterial({ color: 0xe7e5e4 });  // Warm architectural concrete (OSM Buildings look)
+        const roofMat = new THREE.MeshLambertMaterial({ color: 0xd6d3d1 });
+        const edgeMat = new THREE.LineBasicMaterial({ color: 0x475569, transparent: true, opacity: 0.65 });
 
         for (const b of state.osmBuildings3D) {
           const gx = Math.min(N - 1, Math.max(0, Math.round(b.nx * (N - 1))));
@@ -3704,7 +3775,7 @@ git push origin main</pre>
           const zElev = state.grids.dtm2m[gy * N + gx];
           const normH = (zElev - minZ) / zSpan;
           const groundY = normH * 14.0 * state.exaggeration3D - 4.0;
-          const hUnits = Math.max(1.0, (b.heightM / zSpan) * 14.0 * state.exaggeration3D);
+          const hUnits = Math.max(1.4, (b.heightM / zSpan) * 14.0 * state.exaggeration3D);
 
           if (b.polyNorm && b.polyNorm.length >= 3) {
             const shape = new THREE.Shape();
@@ -3720,14 +3791,45 @@ git push origin main</pre>
             const mesh = new THREE.Mesh(extrudeGeom, [roofMat, wallMat]);
             mesh.position.y = groundY;
             window._threeBuildingsGroup.add(mesh);
-          } else {
-            const bGeom = new THREE.BoxGeometry(1.8, hUnits, 1.8);
-            const mesh = new THREE.Mesh(bGeom, wallMat);
-            mesh.position.set((b.nx - 0.5) * blockSize, groundY + hUnits / 2.0, (b.ny - 0.5) * blockSize);
-            window._threeBuildingsGroup.add(mesh);
+
+            const edges = new THREE.LineSegments(new THREE.EdgesGeometry(extrudeGeom, 25), edgeMat);
+            edges.position.y = groundY;
+            window._threeBuildingsGroup.add(edges);
           }
         }
         threeScene.add(window._threeBuildingsGroup);
+      }
+
+      // 2. Separate Organic 3D Vegetation / Canopy Mass Layer (Independent "Vegetação / Copas 3D" layer)
+      if (window._threeTreesGroup) {
+        threeScene.remove(window._threeTreesGroup);
+        window._threeTreesGroup = null;
+      }
+      if (state.show3DTrees && state.grids.ndsm2m) {
+        window._threeTreesGroup = new THREE.Group();
+        const canopyMat = new THREE.MeshLambertMaterial({ color: 0x2d6a4f, transparent: true, opacity: 0.88 });
+        const stepV = Math.max(3, Math.floor(N / 36));
+        for (let gy = 2; gy < N - 2; gy += stepV) {
+          for (let gx = 2; gx < N - 2; gx += stepV) {
+            const chm = state.grids.ndsm2m[gy * N + gx];
+            if (chm >= 4.0) {
+              const zElev = state.grids.dtm2m[gy * N + gx];
+              const normH = (zElev - minZ) / zSpan;
+              const groundY = normH * 14.0 * state.exaggeration3D - 4.0;
+              const hUnits = Math.max(1.0, (chm / zSpan) * 14.0 * state.exaggeration3D * 0.75);
+              // Organic flattened canopy dome (like Google Earth 3D vegetation mesh, not sharp pine cones)
+              const dome = new THREE.Mesh(new THREE.IcosahedronGeometry(1.9, 1), canopyMat);
+              dome.scale.set(1.15, hUnits / 2.2, 1.15);
+              dome.position.set(
+                (gx / (N - 1) - 0.5) * blockSize,
+                groundY + hUnits * 0.45,
+                (gy / (N - 1) - 0.5) * blockSize
+              );
+              window._threeTreesGroup.add(dome);
+            }
+          }
+        }
+        threeScene.add(window._threeTreesGroup);
       }
 
       updateCamera3D();
@@ -4286,9 +4388,9 @@ git push origin main</pre>
       if (state.is3D && threeRenderer) {
         // Draw sky gradient behind the 3D WebGL canvas
         const skyGrad = ctx.createLinearGradient(0, sy, 0, sy + sh);
-        skyGrad.addColorStop(0, '#0c192c');
-        skyGrad.addColorStop(0.58, '#1d4e89');
-        skyGrad.addColorStop(1, '#38bdf8');
+        skyGrad.addColorStop(0, '#1d6fb8');
+        skyGrad.addColorStop(0.52, '#60a5fa');
+        skyGrad.addColorStop(1, '#dbeafe');
         ctx.fillStyle = skyGrad;
         ctx.fillRect(sx, sy, sw, sh);
 
@@ -5539,43 +5641,96 @@ git push origin main</pre>
       });
       document.getElementById('btnExport3DPNG').addEventListener('click', exportScreenPNGWithLegend);
 
-      // Real 3D Building Polygon Footprints from OpenStreetMap (Overpass API `out body geom`)
+      // Real 3D Building Polygon Footprints from OSM Buildings Tile Server + Overpass API Fallback!
       const fetchRealOSMBuildingPolygons = async () => {
         const [[sLat, wLon], [nLat, eLon]] = getActiveBounds();
-        appendLog('Consultando polígonos reais de edificações (footprints + height/levels) no OpenStreetMap...', 'info');
+        appendLog('Carregando polígonos 3D reais do servidor OSM Buildings / OpenStreetMap...', 'info');
+        const blds = [];
+
+        // 1. Try OSM Buildings Tile API (Zoom 15) — fast, CORS-enabled, same source as osmbuildings.org!
         try {
-          const q = `[out:json][timeout:12];way["building"](${sLat},${wLon},${nLat},${eLon});out body geom 180;`;
-          const resp = await fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q));
-          const json = await resp.json();
-          const blds = [];
-          for (const el of (json.elements || []).slice(0, 180)) {
-            if (!el.geometry || el.geometry.length < 3) continue;
-            let sumX = 0, sumY = 0;
-            const polyNorm = el.geometry.map((pt) => {
-              const nx = (pt.lon - wLon) / Math.max(1e-7, eLon - wLon);
-              const ny = 1.0 - (pt.lat - sLat) / Math.max(1e-7, nLat - sLat);
-              sumX += nx;
-              sumY += ny;
-              return [nx, ny];
-            });
-            const nx = sumX / polyNorm.length;
-            const ny = sumY / polyNorm.length;
-            const lvls = parseFloat(el.tags && el.tags['building:levels']) || 2;
-            const hM = parseFloat(el.tags && el.tags['height']) || lvls * 3.2;
-            blds.push({
-              nx,
-              ny,
-              polyNorm,
-              heightM: hM,
-              name: (el.tags && el.tags.name) || 'Edificação OSM'
-            });
+          const zB = 15;
+          const bMin = lonLatToTile(wLon, nLat, zB);
+          const bMax = lonLatToTile(eLon, sLat, zB);
+          const bxCount = Math.min(3, Math.max(1, bMax.x - bMin.x + 1));
+          const byCount = Math.min(3, Math.max(1, bMax.y - bMin.y + 1));
+          const reqs = [];
+          for (let dy = 0; dy < byCount; dy++) {
+            for (let dx = 0; dx < bxCount; dx++) {
+              const url = `https://data.osmbuildings.org/0.2/59fcc2e8/tile/${zB}/${bMin.x + dx}/${bMin.y + dy}.json`;
+              reqs.push(
+                fetch(url)
+                  .then((r) => (r.ok ? r.json() : null))
+                  .catch(() => null)
+              );
+            }
           }
-          state.osmBuildings3D = blds;
-          appendLog(`${blds.length} polígonos reais de edificações carregados do OpenStreetMap!`, 'ok');
+          const tileResults = await Promise.all(reqs);
+          for (const fc of tileResults) {
+            if (!fc || !fc.features) continue;
+            for (const feat of fc.features) {
+              if (!feat.geometry || feat.geometry.type !== 'Polygon') continue;
+              const ring = feat.geometry.coordinates[0];
+              if (!ring || ring.length < 3) continue;
+              let sumX = 0, sumY = 0;
+              const polyNorm = ring.map(([lon, lat]) => {
+                const nx = (lon - wLon) / Math.max(1e-7, eLon - wLon);
+                const ny = 1.0 - (lat - sLat) / Math.max(1e-7, nLat - sLat);
+                sumX += nx;
+                sumY += ny;
+                return [nx, ny];
+              });
+              const nx = sumX / polyNorm.length;
+              const ny = sumY / polyNorm.length;
+              if (nx < 0.01 || nx > 0.99 || ny < 0.01 || ny > 0.99) continue;
+              const props = feat.properties || {};
+              const hM = parseFloat(props.height) || (parseFloat(props.levels) || 2) * 3.2;
+              blds.push({ nx, ny, polyNorm, heightM: hM, name: props.name || 'OSM Building' });
+              if (blds.length >= 450) break;
+            }
+            if (blds.length >= 450) break;
+          }
         } catch (err) {
-          state.osmBuildings3D = [];
-          appendLog(`Overpass indisponível no momento (${err.message}). MDS usando superfície contínua de dossel.`, 'warn');
+          console.warn('OSM Buildings tile fetch note:', err);
         }
+
+        // 2. Fallback to Overpass API mirrors if OSM Buildings returned 0
+        if (blds.length === 0) {
+          const mirrors = [
+            'https://overpass-api.de/api/interpreter',
+            'https://overpass.kumi.systems/api/interpreter'
+          ];
+          const q = `[out:json][timeout:10];way["building"](${sLat},${wLon},${nLat},${eLon});out body geom 250;`;
+          for (const endpoint of mirrors) {
+            try {
+              const resp = await fetch(endpoint + '?data=' + encodeURIComponent(q));
+              if (!resp.ok) continue;
+              const json = await resp.json();
+              for (const el of (json.elements || []).slice(0, 250)) {
+                if (!el.geometry || el.geometry.length < 3) continue;
+                let sumX = 0, sumY = 0;
+                const polyNorm = el.geometry.map((pt) => {
+                  const nx = (pt.lon - wLon) / Math.max(1e-7, eLon - wLon);
+                  const ny = 1.0 - (pt.lat - sLat) / Math.max(1e-7, nLat - sLat);
+                  sumX += nx;
+                  sumY += ny;
+                  return [nx, ny];
+                });
+                const nx = sumX / polyNorm.length;
+                const ny = sumY / polyNorm.length;
+                const lvls = parseFloat(el.tags && el.tags['building:levels']) || 2;
+                const hM = parseFloat(el.tags && el.tags['height']) || lvls * 3.2;
+                blds.push({ nx, ny, polyNorm, heightM: hM, name: (el.tags && el.tags.name) || 'Edificação OSM' });
+              }
+              if (blds.length > 0) break;
+            } catch (e) {}
+          }
+        }
+
+        state.osmBuildings3D = blds;
+        const bdg = document.getElementById('badgeBldCount');
+        if (bdg) bdg.textContent = `${blds.length}`;
+        appendLog(`${blds.length} edificações 3D reais (OSM Buildings) carregadas na AOI!`, blds.length > 0 ? 'ok' : 'warn');
       };
 
       const loadAndToggle3DBuildings = async (enabled) => {
@@ -5918,10 +6073,30 @@ git push origin main</pre>
         appendLog('Exutório e polígono da bacia removidos do mapa.', 'info');
       });
 
+      document.getElementById('btn3DModeMDT').addEventListener('click', () => {
+        state.renderLayer = 'dtm2m';
+        document.getElementById('selectRenderLayer').value = 'dtm2m';
+        document.getElementById('btn3DModeMDT').className = 'py-1 px-2 rounded font-bold bg-sky-500 text-slate-950 transition';
+        document.getElementById('btn3DModeMDS').className = 'py-1 px-2 rounded font-semibold text-slate-300 hover:text-white transition';
+        updateAllVisuals();
+        appendLog('Terreno 3D alternado para MDT (Solo Nu).', 'info');
+      });
+
+      document.getElementById('btn3DModeMDS').addEventListener('click', async () => {
+        state.renderLayer = 'mds2m';
+        document.getElementById('selectRenderLayer').value = 'mds2m';
+        document.getElementById('btn3DModeMDS').className = 'py-1 px-2 rounded font-bold bg-amber-500 text-slate-950 transition';
+        document.getElementById('btn3DModeMDT').className = 'py-1 px-2 rounded font-semibold text-slate-300 hover:text-white transition';
+        if (state.osmBuildings3D.length === 0) await fetchRealOSMBuildingPolygons();
+        updateAllVisuals();
+        appendLog('Terreno 3D alternado para MDS (Superfície).', 'info');
+      });
+
       document.getElementById('chk3DTrees').addEventListener('change', (e) => {
         state.show3DTrees = e.target.checked;
+        document.getElementById('badgeVegStatus').textContent = state.show3DTrees ? 'ON' : 'OFF';
         initOrUpdateThree3D();
-        appendLog(`Árvores / Vegetação 3D (MDS): ${state.show3DTrees ? 'Ativadas' : 'Ocultadas'} (${state.trees3DPositions.length} árvores).`, 'info');
+        appendLog(`Vegetação / Copas 3D (Separada): ${state.show3DTrees ? 'Ativada' : 'Ocultada'}.`, 'info');
       });
       document.getElementById('btnExportWatershedGeoJSON').addEventListener('click', exportWatershedGeoJSON);
       document.getElementById('btnExportWatershedShp').addEventListener('click', exportWatershedShapefileZip);
