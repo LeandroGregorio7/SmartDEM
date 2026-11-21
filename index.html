@@ -146,7 +146,7 @@
     <!-- ====================================================================== -->
     <!-- LEFT COLUMN (7 cols): CLEAN MAP (OSM & ESRI IMAGERY), 3D VIEW & LEGEND -->
     <!-- ====================================================================== -->
-    <section id="centerViewport" class="lg:col-span-7 space-y-3">
+    <section id="centerViewport" class="lg:col-span-7 space-y-3 lg:sticky lg:top-[74px]">
 
       <!-- VIEW 1: MAPA BASE (OSM & ESRI IMAGERY) + 2D/3D CANVAS -->
       <div id="viewContainerMap" class="glass-panel rounded-xl overflow-hidden relative">
@@ -301,12 +301,17 @@
                 <input id="sliderExaggeration" type="range" min="10" max="60" value="20" class="w-full h-1.5 bg-slate-700 rounded cursor-pointer" />
               </div>
 
-              <div class="pt-1 border-t border-slate-800 space-y-1">
-                <label class="flex items-center justify-between text-[11px] text-amber-300 cursor-pointer">
-                  <span class="flex items-center gap-1"><input id="chk3DBuildings" type="checkbox" class="rounded border-slate-600 text-amber-500 bg-slate-900" /> <span data-i18n="chk3DBuildings">Edificações 3D (OSM/MDS)</span></span>
+              <div class="pt-1 border-t border-slate-800 space-y-1.5">
+                <label class="flex items-center gap-1.5 text-[11px] text-amber-300 cursor-pointer">
+                  <input id="chk3DBuildings" type="checkbox" class="rounded border-slate-600 text-amber-500 bg-slate-900" />
+                  <span data-i18n="chk3DBuildings">Casas / Prédios 3D (OSM)</span>
+                </label>
+                <label class="flex items-center gap-1.5 text-[11px] text-emerald-300 cursor-pointer">
+                  <input id="chk3DTrees" type="checkbox" class="rounded border-slate-600 text-emerald-500 bg-slate-900" />
+                  <span data-i18n="chk3DTrees">Árvores / Vegetação 3D (MDS)</span>
                 </label>
                 <button id="btnExport3DBuildings" class="w-full py-1 px-2 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-[10px] font-medium transition">
-                  <span data-i18n="btnExpBuildings">Exportar Prédios 3D (.geojson)</span>
+                  <span data-i18n="btnExpBuildings">Exportar Prédios/MDS (.geojson)</span>
                 </button>
               </div>
             </div>
@@ -418,7 +423,7 @@ git push origin main</pre>
     <!-- ====================================================================== -->
     <!-- RIGHT COLUMN (5 cols): CLEAN 4-STEP LOGICAL WORKFLOW                   -->
     <!-- ====================================================================== -->
-    <aside id="rightAnalyticsDock" class="lg:col-span-5 space-y-3">
+    <aside id="rightAnalyticsDock" class="lg:col-span-5 space-y-3 lg:max-h-[calc(100vh-88px)] lg:overflow-y-auto custom-scroll pr-1">
 
       <!-- PASSO 1: DEFINIR ÁREA DE INTERESSE (AOI) -->
       <div class="glass-panel rounded-xl p-4 space-y-3">
@@ -480,7 +485,8 @@ git push origin main</pre>
           <div>
             <label for="selectRenderLayer" class="block text-[11px] text-slate-300 mb-1 font-medium" data-i18n="lblVariable">Variável no Mapa:</label>
             <select id="selectRenderLayer" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-sky-500">
-              <option value="dtm2m">Altitude MDT 2m (Suavizado)</option>
+              <option value="dtm2m">Altitude MDT 2m (Solo Nu / Bare-Earth)</option>
+              <option value="mds2m">MDS 2m (Superfície: Terreno + Prédios + Árvores)</option>
               <option value="slope2m">Declividade 2m (Slope)</option>
               <option value="aspect2m">Direção / Orientação 2m (Aspect)</option>
               <option value="insolation2m">Insolação / Radiação Solar 2m</option>
@@ -698,14 +704,19 @@ git push origin main</pre>
             <input id="sliderD8Threshold" type="range" min="25" max="240" value="65" class="w-full h-1.5 bg-slate-800 rounded cursor-pointer" />
           </div>
 
-          <div class="flex items-center justify-between text-xs">
+          <div class="flex items-center justify-between gap-1.5 text-xs">
             <label class="flex items-center gap-1.5 text-slate-200 cursor-pointer">
               <input id="chkShowD8Network" type="checkbox" class="rounded border-slate-600 text-cyan-500 bg-slate-900" />
-              <span data-i18n="chkShowD8">Exibir Rede D8 no Mapa</span>
+              <span data-i18n="chkShowD8">Exibir Rede D8</span>
             </label>
-            <button id="btnRunD8Extraction" class="px-2 py-1 rounded text-[11px] font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-              <span data-i18n="btnExtractD8">Recalcular D8</span>
-            </button>
+            <div class="flex items-center gap-1">
+              <button id="btnRunD8Extraction" class="px-2 py-1 rounded text-[11px] font-semibold bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40">
+                <span data-i18n="btnExtractD8">Extrair D8</span>
+              </button>
+              <button id="btnClearD8" class="px-2 py-1 rounded text-[11px] font-semibold bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30">
+                <span data-i18n="btnClearD8">Limpar D8</span>
+              </button>
+            </div>
           </div>
 
           <div class="grid grid-cols-2 gap-1.5">
@@ -722,14 +733,19 @@ git push origin main</pre>
               <span class="text-emerald-300 font-medium" data-i18n="lblWatershedTitle">Delimitar Bacia por Exutório:</span>
               <span id="watershedStatBadge" class="mono text-[10px] text-slate-400">Clique num canal</span>
             </div>
-            <div class="grid grid-cols-3 gap-1.5 text-[11px]">
-              <button id="btnPickPourPoint" class="py-1.5 px-2 rounded font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 truncate">
-                <span id="labelPickPourPoint" data-i18n="btnPickOutlet">Clicar Exutório</span>
+            <div class="grid grid-cols-2 gap-1.5 text-[11px]">
+              <button id="btnPickPourPoint" class="py-1.5 px-2 rounded font-semibold bg-emerald-500/25 hover:bg-emerald-500/35 text-emerald-300 border border-emerald-500/50 truncate">
+                <span id="labelPickPourPoint" data-i18n="btnPickOutlet">📍 Clicar Exutório no Mapa</span>
               </button>
-              <button id="btnExportWatershedGeoJSON" class="py-1.5 px-2 rounded bg-slate-800 text-sky-300 border border-slate-700 truncate">
+              <button id="btnClearWatershed" class="py-1.5 px-2 rounded font-semibold bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 truncate">
+                <span data-i18n="btnClearWs">Limpar Exutório / Bacia</span>
+              </button>
+            </div>
+            <div class="grid grid-cols-2 gap-1.5 text-[11px]">
+              <button id="btnExportWatershedGeoJSON" class="py-1.5 px-2 rounded bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 truncate">
                 <span data-i18n="btnExpWsGeojson">Bacia (.geojson)</span>
               </button>
-              <button id="btnExportWatershedShp" class="py-1.5 px-2 rounded bg-slate-800 text-amber-300 border border-slate-700 truncate">
+              <button id="btnExportWatershedShp" class="py-1.5 px-2 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 truncate">
                 <span data-i18n="btnExpWsShp">Bacia SHP (.zip)</span>
               </button>
             </div>
@@ -745,9 +761,11 @@ git push origin main</pre>
           <div class="grid grid-cols-2 gap-1.5 text-xs">
             <select id="selectContourInterval" class="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-[11px] text-white mono">
               <option value="1">Equidistância: 1.0 m</option>
-              <option value="2" selected>Equidistância: 2.0 m</option>
-              <option value="5">Equidistância: 5.0 m</option>
+              <option value="2">Equidistância: 2.0 m</option>
+              <option value="5" selected>Equidistância: 5.0 m</option>
               <option value="10">Equidistância: 10.0 m</option>
+              <option value="20">Equidistância: 20.0 m</option>
+              <option value="50">Equidistância: 50.0 m</option>
             </select>
             <select id="selectContourAlgo" class="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-[11px] text-white">
               <option value="chaikin">Suavização Chaikin (Orgânica)</option>
@@ -1337,7 +1355,9 @@ git push origin main</pre>
       hasProcessed: false,
       contourAlgo: 'chaikin',
       show3DBuildings: false,
+      show3DTrees: false,
       osmBuildings3D: [],
+      trees3DPositions: [],
       osmGrading: true,
       showVectors: false,
       showD8Network: false,
@@ -1346,7 +1366,7 @@ git push origin main</pre>
       d8Threshold: 65,
       d8ExtractedSegments: [],
       d8ReceiverGrid: null,
-      contourIntervalM: 2.0,
+      contourIntervalM: 5.0,
       showContours: false,
       extractedContours: [],
       embrapaStats: [],
@@ -1368,6 +1388,7 @@ git push origin main</pre>
       grids: {
         dsm30m: null,
         dtm2m: null,
+        mds2m: null,
         slope2mDeg: null,
         slope2mPct: null,
         slope30mDeg: null,
@@ -1538,6 +1559,8 @@ git push origin main</pre>
         let v = 0;
         if (state.renderLayer === 'dtm2m') {
           v = formatElev(state.grids.dtm2m[i]);
+        } else if (state.renderLayer === 'mds2m') {
+          v = formatElev((state.grids.mds2m || state.grids.dtm2m)[i]);
         } else if (state.renderLayer === 'dsm30m') {
           v = formatElev(state.grids.dsm30m[i]);
         } else if (state.renderLayer === 'slope2m') {
@@ -1563,6 +1586,9 @@ git push origin main</pre>
       if (state.renderLayer === 'dtm2m') {
         unitStr = state.elevUnit;
         titleStr = isEN ? `2m Bare-Earth Elevation (${unitStr})` : `Altitude MDT 2m Bare-Earth (${unitStr})`;
+      } else if (state.renderLayer === 'mds2m') {
+        unitStr = state.elevUnit;
+        titleStr = isEN ? `2m Surface Model DSM (Terrain + Buildings + Trees, ${unitStr})` : `MDS 2m (Terreno + Prédios + Árvores, ${unitStr})`;
       } else if (state.renderLayer === 'dsm30m') {
         unitStr = state.elevUnit;
         titleStr = isEN ? `30m Raw DSM Elevation (${unitStr})` : `Altitude MDE 30m Bruto (${unitStr})`;
@@ -2061,9 +2087,58 @@ git push origin main</pre>
       }
 
       const totalCells = N * N;
+      // Build 2m Digital Surface Model (MDS = Bare-Earth DTM + Canopy Height + Urban Buildings)
+      const mds2m = new Float32Array(N * N);
+      const treesList = [];
+      let baseCanPx = null;
+      if (state.realBasemapCanvas) {
+        const sCan = document.createElement('canvas');
+        sCan.width = N;
+        sCan.height = N;
+        const sCtx = sCan.getContext('2d');
+        sCtx.drawImage(state.realBasemapCanvas, 0, 0, N, N);
+        baseCanPx = sCtx.getImageData(0, 0, N, N).data;
+      }
+
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          const i = y * N + x;
+          let surfOffset = canopyArtifact[i] * 0.9;
+          // Detect green vegetation pixels from optical basemap (ExG index = 2G - R - B)
+          if (baseCanPx) {
+            const p = i * 4;
+            const r = baseCanPx[p], g = baseCanPx[p + 1], b = baseCanPx[p + 2];
+            const exg = (2 * g - r - b) / 255.0;
+            if (exg > 0.08 && g > 55) {
+              const treeH = Math.min(18.0, 5.0 + exg * 28.0);
+              surfOffset = Math.max(surfOffset, treeH);
+              if ((x % 11 === 0) && (y % 11 === 0) && treesList.length < 180) {
+                treesList.push({ nx: x / (N - 1), ny: y / (N - 1), heightM: treeH });
+              }
+            }
+          } else if (canopyArtifact[i] > 4.0 && (x % 14 === 0) && (y % 14 === 0) && treesList.length < 120) {
+            treesList.push({ nx: x / (N - 1), ny: y / (N - 1), heightM: canopyArtifact[i] });
+          }
+          mds2m[i] = dtm2m[i] + surfOffset;
+        }
+      }
+      // Stamp loaded 3D OSM buildings onto MDS 2m surface
+      for (const b of state.osmBuildings3D || []) {
+        const bx = Math.min(N - 2, Math.max(1, Math.round(b.nx * (N - 1))));
+        const by = Math.min(N - 2, Math.max(1, Math.round(b.ny * (N - 1))));
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const idx = (by + dy) * N + (bx + dx);
+            mds2m[idx] = Math.max(mds2m[idx], dtm2m[idx] + b.heightM);
+          }
+        }
+      }
+      state.trees3DPositions = treesList;
+
       state.grids = {
         dsm30m,
         dtm2m,
+        mds2m,
         slope2mDeg,
         slope2mPct,
         slope30mDeg,
@@ -2173,28 +2248,56 @@ git push origin main</pre>
     // MARCHING SQUARES CONTOUR LINE GENERATOR (1m, 2m, 5m, 10m)
     // ============================================================================
     function computeEquidistantContours(dtm, N) {
-      const requestedInterval = state.contourIntervalM || 2.0;
-      const elevSpan = Math.max(1.0, state.stats.maxElevM - state.stats.minElevM);
-      // Keep contours fast and readable: cap at ~28 levels if relief span is huge
-      const effInterval = elevSpan / requestedInterval > 28
-        ? Math.ceil(elevSpan / 24.0)
-        : requestedInterval;
-      const minZ = Math.ceil(state.stats.minElevM / effInterval) * effInterval;
-      const maxZ = Math.floor(state.stats.maxElevM / effInterval) * effInterval;
-      const contours = [];
+      // 1. Pre-smooth a dedicated copy of DTM (4-pass Gaussian) so isolines are silky-smooth without jagged pixel stairs!
+      const sGrid = new Float32Array(dtm);
+      const tmp = new Float32Array(N * N);
+      for (let pass = 0; pass < 4; pass++) {
+        for (let y = 0; y < N; y++) {
+          for (let x = 0; x < N; x++) {
+            let acc = 0, wSum = 0;
+            for (let dy = -2; dy <= 2; dy++) {
+              const sy = Math.min(N - 1, Math.max(0, y + dy));
+              for (let dx = -2; dx <= 2; dx++) {
+                const sx = Math.min(N - 1, Math.max(0, x + dx));
+                const w = Math.exp(-(dx * dx + dy * dy) / 3.0);
+                acc += sGrid[sy * N + sx] * w;
+                wSum += w;
+              }
+            }
+            tmp[y * N + x] = acc / wSum;
+          }
+        }
+        sGrid.set(tmp);
+      }
 
-      // Adaptive stride so Marching Squares always stays fast (< 25ms) even on 320x320 grids
-      const step = Math.max(2, Math.floor(N / 70));
-      for (let level = minZ; level <= maxZ; level += effInterval) {
-        const isMaster = Math.abs(Math.round(level / effInterval) % 5) === 0;
+      // 2. Respect the EXACT interval selected by the user (1m, 2m, 5m, 10m, 20m, 50m)!
+      const effInterval = state.contourIntervalM || 5.0;
+      let minVal = Infinity, maxVal = -Infinity;
+      for (let i = 0; i < N * N; i++) {
+        if (sGrid[i] < minVal) minVal = sGrid[i];
+        if (sGrid[i] > maxVal) maxVal = sGrid[i];
+      }
+
+      let minZ = Math.ceil(minVal / effInterval) * effInterval;
+      let maxZ = Math.floor(maxVal / effInterval) * effInterval;
+
+      // Safety cap ONLY if > 55 levels so browser stays instant (still preserves exact selected interval around center)
+      const totalLevels = Math.floor((maxZ - minZ) / effInterval) + 1;
+      const levelStep = totalLevels > 55 ? effInterval * Math.ceil(totalLevels / 45) : effInterval;
+
+      const contours = [];
+      const step = Math.max(2, Math.floor(N / 52));
+
+      for (let level = minZ; level <= maxZ; level += levelStep) {
+        const isMaster = Math.abs(Math.round(level / levelStep) % 5) === 0;
         const segments = [];
 
         for (let y = 0; y < N - step; y += step) {
           for (let x = 0; x < N - step; x += step) {
-            const z00 = dtm[y * N + x];
-            const z10 = dtm[y * N + (x + step)];
-            const z11 = dtm[(y + step) * N + (x + step)];
-            const z01 = dtm[(y + step) * N + x];
+            const z00 = sGrid[y * N + x];
+            const z10 = sGrid[y * N + (x + step)];
+            const z11 = sGrid[(y + step) * N + (x + step)];
+            const z01 = sGrid[(y + step) * N + x];
 
             let mask = 0;
             if (z00 >= level) mask |= 1;
@@ -2220,15 +2323,11 @@ git push origin main</pre>
             else if (mask === 8 || mask === 7) segments.push([bottom, left]);
             else if (mask === 3 || mask === 12) segments.push([left, right]);
             else if (mask === 6 || mask === 9) segments.push([top, bottom]);
-            else if (mask === 5) {
-              segments.push([left, bottom], [top, right]);
-            } else if (mask === 10) {
-              segments.push([left, top], [bottom, right]);
-            }
+            else if (mask === 5) segments.push([left, bottom], [top, right]);
+            else if (mask === 10) segments.push([left, top], [bottom, right]);
           }
         }
 
-        // Stitch adjacent segments into longer polylines for clean GIS export
         const stitched = stitchContourSegments(segments);
         for (const path of stitched) {
           if (path.length >= 3) {
@@ -2246,7 +2345,7 @@ git push origin main</pre>
       state.extractedContours = contours;
       const badge = document.getElementById('contourCountBadge');
       if (badge) {
-        badge.textContent = `${contours.length} isolinhas (${effInterval}m)`;
+        badge.textContent = `${contours.length} isolinhas (${levelStep}m)`;
       }
     }
 
@@ -3046,6 +3145,7 @@ git push origin main</pre>
         state.showWatershed = true;
         state.hasProcessed = true;
         state.interactionMode = null;
+        document.getElementById('leafletMap').classList.remove('drawing-pencil-cursor');
         document.getElementById('labelPickPourPoint').textContent = I18N[state.lang].btnPickOutlet;
         delineateWatershedFromPourPoint(state.gridSize);
         renderMapOverlays();
@@ -3427,7 +3527,7 @@ git push origin main</pre>
           const vIdx = vy * M + vx;
           const gIdx = gy * N + gx;
 
-          const zElev = state.grids.dtm2m[gIdx];
+          const zElev = state.renderLayer === 'mds2m' && state.grids.mds2m ? state.grids.mds2m[gIdx] : state.grids.dtm2m[gIdx];
           const normH = (zElev - minZ) / zSpan;
           const yPos = normH * 14.0 * state.exaggeration3D - 4.0;
           posAttr.setY(vIdx, yPos);
@@ -3549,6 +3649,37 @@ git push origin main</pre>
           window._threeBuildingsGroup.add(bMesh);
         }
         threeScene.add(window._threeBuildingsGroup);
+      }
+
+      // 3D Trees (Vegetation Canopy Cones + Trunks) on top of the 2m terrain
+      if (window._threeTreesGroup) {
+        threeScene.remove(window._threeTreesGroup);
+        window._threeTreesGroup = null;
+      }
+      if (state.show3DTrees && state.trees3DPositions && state.trees3DPositions.length > 0) {
+        window._threeTreesGroup = new THREE.Group();
+        const trunkMat = new THREE.MeshLambertMaterial({ color: 0x78350f });
+        const leafMat = new THREE.MeshLambertMaterial({ color: 0x15803d });
+        for (const tr of state.trees3DPositions) {
+          const gx = Math.min(N - 1, Math.max(0, Math.round(tr.nx * (N - 1))));
+          const gy = Math.min(N - 1, Math.max(0, Math.round(tr.ny * (N - 1))));
+          const zElev = state.grids.dtm2m[gy * N + gx];
+          const normH = (zElev - minZ) / zSpan;
+          const groundY = normH * 14.0 * state.exaggeration3D - 4.0;
+          const treeH = Math.max(2.2, (tr.heightM / zSpan) * 14.0 * state.exaggeration3D);
+
+          const xPos = (tr.nx - 0.5) * blockSize;
+          const zPos = (tr.ny - 0.5) * blockSize;
+
+          const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, treeH * 0.4, 5), trunkMat);
+          trunk.position.set(xPos, groundY + treeH * 0.2, zPos);
+          window._threeTreesGroup.add(trunk);
+
+          const crown = new THREE.Mesh(new THREE.ConeGeometry(1.4, treeH * 0.85, 6), leafMat);
+          crown.position.set(xPos, groundY + treeH * 0.72, zPos);
+          window._threeTreesGroup.add(crown);
+        }
+        threeScene.add(window._threeTreesGroup);
       }
 
       updateCamera3D();
@@ -5677,8 +5808,34 @@ git push origin main</pre>
       document.getElementById('btnPickPourPoint').addEventListener('click', () => {
         if (state.is3D) document.getElementById('btnToggle3D').click();
         state.interactionMode = 'pick_outlet';
+        document.getElementById('leafletMap').classList.add('drawing-pencil-cursor');
         document.getElementById('labelPickPourPoint').textContent = I18N[state.lang].btnPickingOutlet;
-        appendLog('Modo Exutório D8 ativo: clique em qualquer canal de drenagem no mapa para delimitar a bacia a montante.', 'warn');
+        appendLog('Modo Exutório ativo: clique sobre qualquer ponto/canal no mapa para delimitar a bacia.', 'warn');
+        showToast('Clique sobre um canal no mapa para marcar o Exutório!');
+      });
+
+      document.getElementById('btnClearD8').addEventListener('click', () => {
+        state.showD8Network = false;
+        document.getElementById('chkShowD8Network').checked = false;
+        document.getElementById('badgeOptD8').textContent = 'OFF';
+        renderMapOverlays();
+        appendLog('Rede de drenagem D8 limpa do mapa.', 'info');
+      });
+
+      document.getElementById('btnClearWatershed').addEventListener('click', () => {
+        state.showWatershed = false;
+        state.interactionMode = null;
+        document.getElementById('leafletMap').classList.remove('drawing-pencil-cursor');
+        document.getElementById('labelPickPourPoint').textContent = I18N[state.lang].btnPickOutlet;
+        document.getElementById('watershedStatBadge').textContent = 'Clique num canal';
+        renderMapOverlays();
+        appendLog('Exutório e polígono da bacia removidos do mapa.', 'info');
+      });
+
+      document.getElementById('chk3DTrees').addEventListener('change', (e) => {
+        state.show3DTrees = e.target.checked;
+        initOrUpdateThree3D();
+        appendLog(`Árvores / Vegetação 3D (MDS): ${state.show3DTrees ? 'Ativadas' : 'Ocultadas'} (${state.trees3DPositions.length} árvores).`, 'info');
       });
       document.getElementById('btnExportWatershedGeoJSON').addEventListener('click', exportWatershedGeoJSON);
       document.getElementById('btnExportWatershedShp').addEventListener('click', exportWatershedShapefileZip);
