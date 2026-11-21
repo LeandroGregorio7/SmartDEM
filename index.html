@@ -4382,6 +4382,263 @@ git push origin main</pre>
     }
 
     // ============================================================================
+    // D8 DRAINAGE NETWORK GEOJSON & BINARY ESRI SHAPEFILE (.ZIP) EXPORTERS
+    // ============================================================================
+    function exportD8DrainageGeoJSON() {
+      if (!state.d8ExtractedSegments || state.d8ExtractedSegments.length === 0) {
+        computeSuperResolutionPipeline();
+      }
+      const [[sLat, wLon], [nLat, eLon]] = getActiveBounds();
+      const features = state.d8ExtractedSegments.map((seg) => ({
+        type: 'Feature',
+        properties: {
+          reach_id: seg.id,
+          strahler: seg.strahler,
+          flow_cells: seg.flowCells,
+          area_m2: seg.areaM2,
+          length_m: seg.lengthM,
+          slope_pct: seg.slopePct,
+          z_start_m: seg.elevStartM,
+          z_end_m: seg.elevEndM
+        },
+        geometry: {
+          type: 'LineString',
+          coordinates: seg.normCoords.map(([nx, ny]) => [
+            Number((wLon + nx * (eLon - wLon)).toFixed(6)),
+            Number((nLat - ny * (nLat - sLat)).toFixed(6))
+          ])
+        }
+      }));
+
+      const fc = {
+        type: 'FeatureCollection',
+        name: `Drenagem_D8_2m_${state.currentAoiKey}`,
+        crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:OGC:1.3:CRS84' } },
+        features
+      };
+
+      triggerDownload(
+        new Blob([JSON.stringify(fc, null, 2)], { type: 'application/geo+json' }),
+        `rede_drenagem_d8_2m_${state.currentAoiKey}.geojson`
+      );
+      appendLog(`Rede de drenagem D8 exportada em GeoJSON (${features.length} tramos @ 2m).`, 'ok');
+      showToast(`GeoJSON da Rede D8 (${features.length} canais) exportado!`);
+    }
+
+    function exportD8DrainageShapefileZip() {
+      if (!state.d8ExtractedSegments || state.d8ExtractedSegments.length === 0) {
+        computeSuperResolutionPipeline();
+      }
+      const segs = state.d8ExtractedSegments;
+      const [[sLat, wLon], [nLat, eLon]] = getActiveBounds();
+
+      // Convert normalized coords to geographic [lon, lat]
+      const polylines = segs.map((seg) =>
+        seg.normCoords.map(([nx, ny]) => [
+          wLon + nx * (eLon - wLon),
+          nLat - ny * (nLat - sLat)
+        ])
+      );
+
+      // Compute total byte size for .shp and .shx
+      let shpRecordBytes = 0;
+      for (const pts of polylines) {
+        shpRecordBytes += 8 + 44 + 4 + pts.length * 16;
+      }
+      const shpTotalBytes = 100 + shpRecordBytes;
+      const shxTotalBytes = 100 + polylines.length * 8;
+
+      const shpBuf = new ArrayBuffer(shpTotalBytes);
+      const shpView = new DataView(shpBuf);
+      const shxBuf = new ArrayBuffer(shxTotalBytes);
+      const shxView = new DataView(shxBuf);
+
+      // Header helper for .shp and .shx
+      const writeShpHeader = (view, totalByteLen) => {
+        view.setInt32(0, 9994, false);               // File code (Big-endian)
+        view.setInt32(24, totalByteLen / 2, false);  // File length in 16-bit words (Big-endian)
+        view.setInt32(28, 1000, true);               // Version 1000 (Little-endian)
+        view.setInt32(32, 3, true);                  // Shape Type 3 = PolyLine (Little-endian)
+        view.setFloat64(36, wLon, true);             // Xmin
+        view.setFloat64(44, sLat, true);             // Ymin
+        view.setFloat64(52, eLon, true);             // Xmax
+        view.setFloat64(60, nLat, true);             // Ymax
+      };
+      writeShpHeader(shpView, shpTotalBytes);
+      writeShpHeader(shxView, shxTotalBytes);
+
+      let shpPos = 100;
+      let shxPos = 100;
+
+      for (let i = 0; i < polylines.length; i++) {
+        const pts = polylines[i];
+        const contentBytes = 44 + 4 + pts.length * 16;
+        const contentWords = contentBytes / 2;
+
+        // .shx index entry (offset & content length in 16-bit words, big-endian)
+        shxView.setInt32(shxPos, shpPos / 2, false);
+        shxView.setInt32(shxPos + 4, contentWords, false);
+        shxPos += 8;
+
+        // .shp record header (1-based Record Number & Content Length in words, big-endian)
+        shpView.setInt32(shpPos, i + 1, false);
+        shpView.setInt32(shpPos + 4, contentWords, false);
+        shpPos += 8;
+
+        // PolyLine Record Content (Little-endian)
+        let bxMin = Infinity, byMin = Infinity, bxMax = -Infinity, byMax = -Infinity;
+        for (const [x, y] of pts) {
+          if (x < bxMin) bxMin = x;
+          if (x > bxMax) bxMax = x;
+          if (y < byMin) byMin = y;
+          if (y > byMax) byMax = y;
+        }
+        shpView.setInt32(shpPos, 3, true);           // Shape Type = 3 (PolyLine)
+        shpView.setFloat64(shpPos + 4, bxMin, true);
+        shpView.setFloat64(shpPos + 12, byMin, true);
+        shpView.setFloat64(shpPos + 20, bxMax, true);
+        shpView.setFloat64(shpPos + 28, byMax, true);
+        shpView.setInt32(shpPos + 36, 1, true);      // NumParts = 1
+        shpView.setInt32(shpPos + 40, pts.length, true); // NumPoints
+        shpView.setInt32(shpPos + 44, 0, true);      // Parts[0] = 0
+        shpPos += 48;
+
+        for (const [x, y] of pts) {
+          shpView.setFloat64(shpPos, x, true);
+          shpView.setFloat64(shpPos + 8, y, true);
+          shpPos += 16;
+        }
+      }
+
+      // Build dBASE III (.dbf) attribute table (5 fields: ID, STRAHLER, FLOW_CELLS, AREA_M2, SLOPE_PCT)
+      const fields = [
+        { name: 'ID', type: 'N', len: 6, dec: 0 },
+        { name: 'STRAHLER', type: 'N', len: 4, dec: 0 },
+        { name: 'FLOW_CELLS', type: 'N', len: 10, dec: 0 },
+        { name: 'AREA_M2', type: 'N', len: 12, dec: 1 },
+        { name: 'SLOPE_PCT', type: 'N', len: 8, dec: 2 }
+      ];
+      const headerLen = 32 + fields.length * 32 + 1;
+      const recordLen = 1 + fields.reduce((acc, f) => acc + f.len, 0);
+      const dbfTotalBytes = headerLen + segs.length * recordLen + 1;
+      const dbfBuf = new Uint8Array(dbfTotalBytes);
+      const dbfView = new DataView(dbfBuf.buffer);
+
+      dbfBuf[0] = 0x03; // dBASE III without memo
+      dbfBuf[1] = 126;  // Year (2026 - 1900)
+      dbfBuf[2] = 11;   // Month
+      dbfBuf[3] = 17;   // Day
+      dbfView.setUint32(4, segs.length, true);
+      dbfView.setUint16(8, headerLen, true);
+      dbfView.setUint16(10, recordLen, true);
+
+      let fOffset = 32;
+      for (const f of fields) {
+        for (let c = 0; c < f.name.length; c++) dbfBuf[fOffset + c] = f.name.charCodeAt(c);
+        dbfBuf[fOffset + 11] = f.type.charCodeAt(0);
+        dbfBuf[fOffset + 16] = f.len;
+        dbfBuf[fOffset + 17] = f.dec;
+        fOffset += 32;
+      }
+      dbfBuf[fOffset] = 0x0d; // Header terminator
+
+      let rOffset = headerLen;
+      const writePaddedNum = (valStr, width) => {
+        const padded = valStr.padStart(width, ' ').slice(0, width);
+        for (let c = 0; c < width; c++) dbfBuf[rOffset + c] = padded.charCodeAt(c);
+        rOffset += width;
+      };
+
+      for (const seg of segs) {
+        dbfBuf[rOffset++] = 0x20; // Not deleted
+        writePaddedNum(String(seg.id), 6);
+        writePaddedNum(String(seg.strahler), 4);
+        writePaddedNum(String(seg.flowCells), 10);
+        writePaddedNum(seg.areaM2.toFixed(1), 12);
+        writePaddedNum(seg.slopePct.toFixed(2), 8);
+      }
+      dbfBuf[rOffset] = 0x1a; // EOF marker
+
+      // Build .prj WKT string
+      const prjStr = 'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]]';
+      const prjBytes = new TextEncoder().encode(prjStr);
+
+      // Package .shp, .shx, .dbf, .prj into a valid standard .zip archive in memory
+      const baseName = `drenagem_d8_2m_${state.currentAoiKey}`;
+      const zipBlob = buildUncompressedZipBlob([
+        { name: `${baseName}.shp`, data: new Uint8Array(shpBuf) },
+        { name: `${baseName}.shx`, data: new Uint8Array(shxBuf) },
+        { name: `${baseName}.dbf`, data: dbfBuf },
+        { name: `${baseName}.prj`, data: prjBytes }
+      ]);
+
+      triggerDownload(zipBlob, `${baseName}_shapefile.zip`);
+      appendLog(`Shapefile (.shp, .shx, .dbf, .prj) com ${segs.length} canais D8 empacotado e exportado!`, 'ok');
+      showToast(`Shapefile (.zip) da Rede D8 exportado com sucesso!`);
+    }
+
+    function computeCRC32(bytes) {
+      let c = 0xffffffff;
+      for (let i = 0; i < bytes.length; i++) {
+        c ^= bytes[i];
+        for (let k = 0; k < 8; k++) {
+          c = (c >>> 1) ^ (c & 1 ? 0xedb88320 : 0);
+        }
+      }
+      return (c ^ 0xffffffff) >>> 0;
+    }
+
+    function buildUncompressedZipBlob(files) {
+      const localParts = [];
+      const centralParts = [];
+      let offset = 0;
+
+      for (const file of files) {
+        const nameBytes = new TextEncoder().encode(file.name);
+        const data = file.data;
+        const crc = computeCRC32(data);
+
+        const localHeader = new Uint8Array(30 + nameBytes.length);
+        const lv = new DataView(localHeader.buffer);
+        lv.setUint32(0, 0x04034b50, true);
+        lv.setUint16(4, 20, true);
+        lv.setUint16(8, 0, true); // STORE (0 = uncompressed)
+        lv.setUint32(14, crc, true);
+        lv.setUint32(18, data.length, true);
+        lv.setUint32(22, data.length, true);
+        lv.setUint16(26, nameBytes.length, true);
+        localHeader.set(nameBytes, 30);
+
+        const centralHeader = new Uint8Array(46 + nameBytes.length);
+        const cv = new DataView(centralHeader.buffer);
+        cv.setUint32(0, 0x02014b50, true);
+        cv.setUint16(4, 20, true);
+        cv.setUint16(6, 20, true);
+        cv.setUint32(16, crc, true);
+        cv.setUint32(20, data.length, true);
+        cv.setUint32(24, data.length, true);
+        cv.setUint16(28, nameBytes.length, true);
+        cv.setUint32(42, offset, true);
+        centralHeader.set(nameBytes, 46);
+
+        localParts.push(localHeader, data);
+        centralParts.push(centralHeader);
+        offset += localHeader.length + data.length;
+      }
+
+      const centralSize = centralParts.reduce((a, b) => a + b.length, 0);
+      const eocd = new Uint8Array(22);
+      const ev = new DataView(eocd.buffer);
+      ev.setUint32(0, 0x06054b50, true);
+      ev.setUint16(8, files.length, true);
+      ev.setUint16(10, files.length, true);
+      ev.setUint32(12, centralSize, true);
+      ev.setUint32(16, offset, true);
+
+      return new Blob([...localParts, ...centralParts, eocd], { type: 'application/zip' });
+    }
+
+    // ============================================================================
     // CONTOUR LINES, WATERSHED POLYGON & EMBRAPA CSV EXPORTERS
     // ============================================================================
     function exportContoursGeoJSON() {
