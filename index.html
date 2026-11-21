@@ -304,11 +304,11 @@
               <div class="pt-1 border-t border-slate-800 space-y-1.5">
                 <label class="flex items-center gap-1.5 text-[11px] text-amber-300 cursor-pointer">
                   <input id="chk3DBuildings" type="checkbox" class="rounded border-slate-600 text-amber-500 bg-slate-900" />
-                  <span data-i18n="chk3DBuildings">Casas / Prédios 3D (OSM)</span>
+                  <span data-i18n="chk3DBuildings">Prédios 3D Reais (Polígonos OSM)</span>
                 </label>
                 <label class="flex items-center gap-1.5 text-[11px] text-emerald-300 cursor-pointer">
                   <input id="chk3DTrees" type="checkbox" class="rounded border-slate-600 text-emerald-500 bg-slate-900" />
-                  <span data-i18n="chk3DTrees">Árvores / Vegetação 3D (MDS)</span>
+                  <span data-i18n="chk3DTrees">Superfície Contínua MDS (Copas/CHM)</span>
                 </label>
                 <button id="btnExport3DBuildings" class="w-full py-1 px-2 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-[10px] font-medium transition">
                   <span data-i18n="btnExpBuildings">Exportar Prédios/MDS (.geojson)</span>
@@ -475,18 +475,27 @@ git push origin main</pre>
           </h2>
         </div>
 
-        <!-- Primary Action Button -->
-        <button id="btnRunSR" class="w-full py-2.5 px-4 rounded-lg font-bold text-xs bg-gradient-to-r from-sky-500 to-emerald-500 hover:from-sky-400 hover:to-emerald-400 text-slate-950 shadow-lg shadow-sky-500/20 flex items-center justify-center gap-2 transition">
-          <i data-lucide="sparkles" class="w-4 h-4"></i>
-          <span data-i18n="btnRunSR">Executar Super-Resolução (30m &rarr; 2m)</span>
-        </button>
+        <!-- Explicit Separate Model Selector: MDT (Bare-Earth DEM) vs MDS (Surface: Canopy + Real OSM Buildings) -->
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <button id="btnRunDEM" class="py-2.5 px-3 rounded-lg font-bold bg-gradient-to-r from-sky-500 to-emerald-500 hover:from-sky-400 hover:to-emerald-400 text-slate-950 shadow-lg shadow-sky-500/20 flex items-center justify-center gap-1.5 transition">
+            <i data-lucide="mountain" class="w-4 h-4"></i>
+            <span data-i18n="btnRunDEM">Gerar MDT 2m (Solo Nu)</span>
+          </button>
+          <button id="btnRunMDS" class="py-2.5 px-3 rounded-lg font-bold bg-slate-800 hover:bg-amber-500/25 text-amber-300 border border-amber-500/50 flex items-center justify-center gap-1.5 transition">
+            <i data-lucide="building-2" class="w-4 h-4"></i>
+            <span data-i18n="btnRunMDS">Gerar MDS 2m (Prédios/Copas)</span>
+          </button>
+        </div>
+        <!-- Keep legacy btnRunSR hidden-accessible or mapped cleanly -->
+        <button id="btnRunSR" class="hidden" aria-hidden="true">Executar Super-Resolução</button>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
           <div>
             <label for="selectRenderLayer" class="block text-[11px] text-slate-300 mb-1 font-medium" data-i18n="lblVariable">Variável no Mapa:</label>
             <select id="selectRenderLayer" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-sky-500">
               <option value="dtm2m">Altitude MDT 2m (Solo Nu / Bare-Earth)</option>
-              <option value="mds2m">MDS 2m (Superfície: Terreno + Prédios + Árvores)</option>
+              <option value="mds2m">MDS 2m (Superfície Contínua: Terreno + Copas + Prédios)</option>
+              <option value="ndsm2m">nDSM / CHM 2m (Altura de Copas &amp; Prédios = MDS - MDT)</option>
               <option value="slope2m">Declividade 2m (Slope)</option>
               <option value="aspect2m">Direção / Orientação 2m (Aspect)</option>
               <option value="insolation2m">Insolação / Radiação Solar 2m</option>
@@ -1044,20 +1053,26 @@ git push origin main</pre>
         methodologyHTML: `
           <div class="space-y-3">
             <div class="p-3 rounded-lg bg-slate-800/80 border border-slate-700">
-              <h4 class="font-bold text-sky-300 text-sm mb-1">1. Arquitetura Híbrida de Super-Resolução (30 m &rarr; 2 m)</h4>
-              <p>O <strong>SmartDEM - Super Resolution</strong> adapta o princípio físico de fusão guiada do <em>LST Super-Resolution (TSharp)</em> para Modelos Digitais de Elevação. Em vez de aplicar uma rede generativa cega que alucina ondulações inexistentes, o pipeline decompõe o relevo em tendência macroscópica ($Z_{trend}$ via filtro Gaussiano do MDE de 30 m) e resíduo microtopográfico ($Z_{res}$), guiado pelos gradientes de refletância óptica (Esri World Imagery / Sentinel-2) e por restrições geométricas da rede viária e hidrográfica do OpenStreetMap.</p>
-            </div>
-            <div class="p-3 rounded-lg bg-slate-800/80 border border-slate-700">
-              <h4 class="font-bold text-emerald-300 text-sm mb-1">2. Remoção de Viés de Dossel e Edificações (Bare-Earth ANADEM / FABDEM)</h4>
-              <p>Modelos orbitais de radar (SRTM Banda C e Copernicus GLO-30 Banda X) comportam-se como Modelos Digitais de Superfície (MDS). O filtro <em>Bare-Earth</em> aplica abertura morfológica e compensação de cobertura vegetal calibrada segundo os parâmetros do <a href="https://www.mdpi.com/2072-4292/16/13/2321" target="_blank" class="text-sky-400 underline">ANADEM (ANA/UFRGS)</a> e do <a href="https://gee-community-catalog.org/projects/fabdem/" target="_blank" class="text-sky-400 underline">FABDEM (Hawker et al., 2022)</a>, eliminando degraus artificiais nas bordas de fragmentos florestais e edifícios.</p>
-            </div>
-            <div class="p-3 rounded-lg bg-slate-800/80 border border-slate-700">
-              <h4 class="font-bold text-amber-300 text-sm mb-1">3. Derivadas Geomorfométricas &amp; Equação de Tobler (Smart15)</h4>
+              <h4 class="font-bold text-sky-300 text-sm mb-1">1. Serviços de Dados em Nuvem (Zero-Upload)</h4>
               <ul class="list-disc pl-5 space-y-1">
-                <li><strong>Declividade (Slope):</strong> Calculada por diferenças finitas centrais na grade métrica de 2 m em graus ($\\theta = \\arctan(\\sqrt{dz/dx^2 + dz/dy^2})$) ou porcentagem ($100 \\cdot \\tan(\\theta)$).</li>
-                <li><strong>Direção / Orientação (Aspect):</strong> Azimute da vertente ($0^\\circ$ a $360^\\circ$ a partir do Norte verdadeiro: $\\psi = \\text{atan2}(dz/dy, -dz/dx)$).</li>
-                <li><strong>Insolação / Radiação Direta:</strong> Cosseno do ângulo de incidência solar combinando zenital solar, azimute solar ($\\alpha_s$) e inclinação/orientação local da célula de 2 m.</li>
-                <li><strong>Impedância de Caminhada de Tobler:</strong> $W = 6 \\cdot e^{-3.5 |dh/dx + 0.05|}$ (km/h), alimentando diretamente a tríade de acessibilidade do <strong>Smart15</strong>.</li>
+                <li><strong>Elevação Base (30 m):</strong> Tiles públicos <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" class="text-sky-400 underline">AWS Open Data Terrarium</a> (agregando SRTM 30 m / Copernicus / GMTED em PNG 24-bit: <code>Z = (R×256 + G + B/256) − 32768</code> m), com <em>zoom adaptativo</em> (z7–z13) para cobrir 100% da AOI sem cortes.</li>
+                <li><strong>Guia Óptico e Textura 3D:</strong> Tiles <a href="https://qms.nextgis.com/geoservices/1300/" target="_blank" class="text-sky-400 underline">Esri World Imagery</a>, Mapa Base OSM e Esri Topo em alta resolução (<em>zoom adaptativo</em> z9–z16).</li>
+                <li><strong>Edificações 3D Reais (MDS):</strong> Consulta direta à API <strong>Overpass do OpenStreetMap</strong> (<code>way["building"]</code> com <code>out body geom</code>), extraindo os polígonos arquitetônicos reais (<em>footprints</em>) e alturas (<code>height</code> ou <code>building:levels × 3,2 m</code>).</li>
+              </ul>
+            </div>
+            <div class="p-3 rounded-lg bg-slate-800/80 border border-slate-700">
+              <h4 class="font-bold text-emerald-300 text-sm mb-1">2. Técnica de Reamostragem e Separação MDT vs. MDS (30 m &rarr; 2 m)</h4>
+              <ul class="list-disc pl-5 space-y-1">
+                <li><strong>MDT 2 m (Solo Nu / Bare-Earth):</strong> Projeção métrica da AOI para grade de até <code>320×320 px</code> (resolução nativa de <strong>2,0 m/px</strong> em áreas de até 640×640 m). Aplica filtro <em>Bare-Earth</em> inspirado no <a href="https://www.mdpi.com/2072-4292/16/13/2321" target="_blank" class="text-sky-400 underline">ANADEM</a> e <a href="https://gee-community-catalog.org/projects/fabdem/" target="_blank" class="text-sky-400 underline">FABDEM</a>, suprimindo contraste de telhados para manter o solo limpo, com 3 motores selecionáveis (<em>Fusão Guiada TSharp</em>, <em>CNN Residual DTDL Laplaciana</em> ou <em>Bicúbica</em>) e suavização Gaussiana multipassagem controlada pela Rugosidade.</li>
+                <li><strong>MDS 2 m &amp; nDSM / CHM (MDS &minus; MDT):</strong> Acionado separadamente. Estima a altura contínua do dossel vegetal (<em>CHM</em>) via índice óptico de verdor (<code>ExG = (2G&minus;R&minus;B)/255</code> + razão <code>(G&minus;R)/(G+R)</code>) suavizado organicamente (Gaussiana 2x), rasteriza os polígonos reais de edificações do OSM sobre o <code>nDSM</code> e calcula <code>MDS = MDT + nDSM</code>, com extrusão arquitetônica real em WebGL (<code>THREE.ExtrudeGeometry</code>).</li>
+              </ul>
+            </div>
+            <div class="p-3 rounded-lg bg-slate-800/80 border border-slate-700">
+              <h4 class="font-bold text-amber-300 text-sm mb-1">3. Geomorfometria, Hidrologia D8, Curvas de Nível e Smart15</h4>
+              <ul class="list-disc pl-5 space-y-1">
+                <li><strong>Derivadas Métricas Exatas:</strong> Declividade (<code>°</code> e <code>%</code>), Orientação (<em>Aspect</em> 0–360°), Insolação Solar direta (<code>Wh/m²</code>) e <strong>Classes de Relevo EMBRAPA (SiBCS)</strong> calculadas sobre o passo métrico real da grade.</li>
+                <li><strong>Hidrologia D8 &amp; Bacias:</strong> Preenchimento de depressões, Direção D8 (códigos 1–128), Fluxo Acumulado topológico, Hierarquia de <strong>Strahler</strong> e delimitação de bacia a montante por busca em largura (BFS) a partir do exutório clicado.</li>
+                <li><strong>Curvas de Nível &amp; Tobler:</strong> Isolinhas (1 m a 50 m) via <em>Marching Squares</em> com pré-suavização Gaussiana (4x) + <em>Chaikin / Catmull-Rom</em>, e equação de caminhada de <a href="https://en.wikipedia.org/wiki/Tobler%27s_hiking_function" target="_blank" class="text-sky-400 underline">Tobler</a> (<code>W = 6·e^(-3.5|dh/dx + 0.05|)</code>) para o <strong>Smart15</strong>.</li>
               </ul>
             </div>
           </div>
@@ -1190,20 +1205,26 @@ git push origin main</pre>
         methodologyHTML: `
           <div class="space-y-3">
             <div class="p-3 rounded-lg bg-slate-800/80 border border-slate-700">
-              <h4 class="font-bold text-sky-300 text-sm mb-1">1. Hybrid Guided Super-Resolution Architecture (30 m &rarr; 2 m)</h4>
-              <p><strong>SmartDEM - Super Resolution</strong> adapts the physical guided-fusion paradigm from <em>LST Super-Resolution (TSharp)</em> to Digital Elevation Models. Rather than relying on unconstrained GANs that hallucinate false topographic ripples, the pipeline decomposes terrain into macro-scale trend ($Z_{trend}$) and micro-topographic residual ($Z_{res}$), guided by high-resolution optical reflectance gradients (Esri World Imagery / Sentinel-2) and OpenStreetMap road and hydrography constraints.</p>
-            </div>
-            <div class="p-3 rounded-lg bg-slate-800/80 border border-slate-700">
-              <h4 class="font-bold text-emerald-300 text-sm mb-1">2. Canopy &amp; Building Bias Removal (ANADEM / FABDEM Bare-Earth Filter)</h4>
-              <p>Global radar DEMs (SRTM C-band and Copernicus GLO-30 X-band) act as Digital Surface Models (DSMs). Our <em>Bare-Earth</em> filter applies morphological opening and vegetation bias correction calibrated after <a href="https://www.mdpi.com/2072-4292/16/13/2321" target="_blank" class="text-sky-400 underline">ANADEM (ANA/UFRGS)</a> and <a href="https://gee-community-catalog.org/projects/fabdem/" target="_blank" class="text-sky-400 underline">FABDEM (Hawker et al., 2022)</a>, removing artificial cliff spikes along forest edges and buildings.</p>
-            </div>
-            <div class="p-3 rounded-lg bg-slate-800/80 border border-slate-700">
-              <h4 class="font-bold text-amber-300 text-sm mb-1">3. Geomorphometric Derivatives &amp; Tobler Impedance (Smart15)</h4>
+              <h4 class="font-bold text-sky-300 text-sm mb-1">1. Cloud Data Services (Zero-Upload)</h4>
               <ul class="list-disc pl-5 space-y-1">
-                <li><strong>Slope:</strong> Computed via central finite differences at 2 m spacing in degrees ($\\theta = \\arctan(\\sqrt{dz/dx^2 + dz/dy^2})$) or percent ($100 \\cdot \\tan(\\theta)$).</li>
-                <li><strong>Aspect (Direction):</strong> Downslope compass azimuth ($0^\\circ$ to $360^\\circ$ clockwise from North).</li>
-                <li><strong>Solar Insolation:</strong> Cosine of solar illumination incidence combining solar zenith, solar azimuth, and 2 m surface normal.</li>
-                <li><strong>Tobler's Hiking Function:</strong> $W = 6 \\cdot e^{-3.5 |dh/dx + 0.05|}$ (km/h), powering 2 m urban accessibility in <strong>Smart15</strong>.</li>
+                <li><strong>Base Elevation (30 m):</strong> Public <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" class="text-sky-400 underline">AWS Open Data Terrarium Tiles</a> (aggregating SRTM 30 m / Copernicus / GMTED in 24-bit RGB PNG: <code>Z = (R×256 + G + B/256) − 32768</code> m) using adaptive zoom (z7–z13) to cover 100% of the AOI with zero edge clamping.</li>
+                <li><strong>Optical Guidance &amp; 3D Texture:</strong> <a href="https://qms.nextgis.com/geoservices/1300/" target="_blank" class="text-sky-400 underline">Esri World Imagery</a>, OSM Street Map, and Esri Topo tiles (adaptive zoom z9–z16).</li>
+                <li><strong>Real 3D Buildings (DSM):</strong> Live <strong>OpenStreetMap Overpass API</strong> query (<code>way["building"]</code> with <code>out body geom</code>), fetching real architectural polygon footprints and heights (<code>height</code> or <code>building:levels × 3.2 m</code>).</li>
+              </ul>
+            </div>
+            <div class="p-3 rounded-lg bg-slate-800/80 border border-slate-700">
+              <h4 class="font-bold text-emerald-300 text-sm mb-1">2. Resampling Technique &amp; Bare-Earth DTM vs. DSM Separation (30 m &rarr; 2 m)</h4>
+              <ul class="list-disc pl-5 space-y-1">
+                <li><strong>2 m Bare-Earth DTM (MDT):</strong> Metric grid resampling up to <code>320×320 px</code> (native <strong>2.0 m/px</strong> for AOIs up to 640×640 m). Applies <a href="https://www.mdpi.com/2072-4292/16/13/2321" target="_blank" class="text-sky-400 underline">ANADEM</a> / <a href="https://gee-community-catalog.org/projects/fabdem/" target="_blank" class="text-sky-400 underline">FABDEM</a>-inspired canopy/rooftop suppression so urban roofs do not emboss onto bare ground, offering 3 engines (<em>Guided TSharp Fusion</em>, <em>DTDL Residual Curvature</em>, or <em>Bicubic Baseline</em>) and roughness-controlled Gaussian smoothing.</li>
+                <li><strong>2 m Surface Model DSM (MDS) &amp; nDSM / CHM (DSM &minus; DTM):</strong> Triggered independently. Estimates continuous organic Canopy Height (<em>CHM</em>) via optical Excess Greenness (<code>ExG = (2G&minus;R&minus;B)/255</code> + <code>(G&minus;R)/(G+R)</code>) smoothed by a 2-pass Gaussian filter, rasterizes real OSM building polygons onto <code>nDSM</code>, and computes <code>DSM = DTM + nDSM</code> with architectural WebGL extrusion (<code>THREE.ExtrudeGeometry</code>).</li>
+              </ul>
+            </div>
+            <div class="p-3 rounded-lg bg-slate-800/80 border border-slate-700">
+              <h4 class="font-bold text-amber-300 text-sm mb-1">3. Geomorphometry, D8 Hydrology, Contours &amp; Smart15</h4>
+              <ul class="list-disc pl-5 space-y-1">
+                <li><strong>Exact Metric Derivatives:</strong> Slope (<code>°</code> / <code>%</code>), Aspect (0–360°), Direct Solar Insolation (<code>Wh/m²</code>), and <strong>EMBRAPA SiBCS 6-Class Relief Table</strong> computed using exact metric cell spacing.</li>
+                <li><strong>D8 Hydrology &amp; Watersheds:</strong> Depression conditioning, D8 Flow Direction (1–128), topological Flow Accumulation, <strong>Strahler Order</strong>, and BFS upstream Watershed Delineation from any clicked pour point.</li>
+                <li><strong>Contours &amp; Tobler Impedance:</strong> Pre-smoothed (4x Gaussian) <em>Marching Squares</em> + <em>Chaikin / Catmull-Rom</em> contours (1 m–50 m) and <a href="https://en.wikipedia.org/wiki/Tobler%27s_hiking_function" target="_blank" class="text-sky-400 underline">Tobler's Hiking Function</a> (<code>W = 6·e^(-3.5|dh/dx + 0.05|)</code>) for <strong>Smart15</strong>.</li>
               </ul>
             </div>
           </div>
@@ -1389,6 +1410,7 @@ git push origin main</pre>
         dsm30m: null,
         dtm2m: null,
         mds2m: null,
+        ndsm2m: null,
         slope2mDeg: null,
         slope2mPct: null,
         slope30mDeg: null,
@@ -1561,6 +1583,8 @@ git push origin main</pre>
           v = formatElev(state.grids.dtm2m[i]);
         } else if (state.renderLayer === 'mds2m') {
           v = formatElev((state.grids.mds2m || state.grids.dtm2m)[i]);
+        } else if (state.renderLayer === 'ndsm2m') {
+          v = formatElev((state.grids.ndsm2m || state.grids.dtm2m)[i]);
         } else if (state.renderLayer === 'dsm30m') {
           v = formatElev(state.grids.dsm30m[i]);
         } else if (state.renderLayer === 'slope2m') {
@@ -1588,7 +1612,11 @@ git push origin main</pre>
         titleStr = isEN ? `2m Bare-Earth Elevation (${unitStr})` : `Altitude MDT 2m Bare-Earth (${unitStr})`;
       } else if (state.renderLayer === 'mds2m') {
         unitStr = state.elevUnit;
-        titleStr = isEN ? `2m Surface Model DSM (Terrain + Buildings + Trees, ${unitStr})` : `MDS 2m (Terreno + Prédios + Árvores, ${unitStr})`;
+        titleStr = isEN ? `2m Surface Model DSM (Terrain + Canopy + Buildings, ${unitStr})` : `MDS 2m (Terreno + Copas + Prédios, ${unitStr})`;
+      } else if (state.renderLayer === 'ndsm2m') {
+        unitStr = state.elevUnit;
+        titleStr = isEN ? `2m Object Height nDSM / CHM (MDS - MDT, ${unitStr})` : `nDSM / CHM 2m (Altura de Copas & Prédios, ${unitStr})`;
+        minVal = 0;
       } else if (state.renderLayer === 'dsm30m') {
         unitStr = state.elevUnit;
         titleStr = isEN ? `30m Raw DSM Elevation (${unitStr})` : `Altitude MDE 30m Bruto (${unitStr})`;
@@ -1915,10 +1943,11 @@ git push origin main</pre>
           const sDist = streamDist[idx];
           const rDist = roadDist[idx];
           const streamIncision = sDist < 4.5 ? -2.4 * Math.exp(-0.45 * sDist * sDist) : 0;
-          const roughAmp = state.roughness * 2.8;
+          // Keep Bare-Earth MDT clean of sharp urban building roof embossings (suppress optical roof contrast in MDT)
+          const roughAmp = state.roughness * 1.1;
           const microDetail = hasRealOpt
-            ? state.realOpticalEdge[idx] * (0.4 + roughAmp)
-            : (0.2 + roughAmp) * (Math.sin(nx * 28.0 + ny * 18.0) * Math.cos(ny * 24.0) + 0.4 * Math.sin(nx * 65.0) * Math.cos(ny * 65.0));
+            ? Math.max(-0.8, Math.min(0.8, state.realOpticalEdge[idx] * 0.25)) * (0.2 + roughAmp)
+            : (0.15 + roughAmp * 0.6) * Math.sin(nx * 20.0 + ny * 14.0) * Math.cos(ny * 18.0);
 
           rawGround[idx] = macro + streamIncision + microDetail;
           opticalGuideGrad[idx] = microDetail + (sDist < 3.5 ? -1.8 : 0);
@@ -2087,9 +2116,9 @@ git push origin main</pre>
       }
 
       const totalCells = N * N;
-      // Build 2m Digital Surface Model (MDS = Bare-Earth DTM + Canopy Height + Urban Buildings)
+      // Build Continuous Physical nDSM (Canopy Height Model + Real OSM Buildings) & MDS = MDT + nDSM
+      const ndsm2m = new Float32Array(N * N);
       const mds2m = new Float32Array(N * N);
-      const treesList = [];
       let baseCanPx = null;
       if (state.realBasemapCanvas) {
         const sCan = document.createElement('canvas');
@@ -2100,45 +2129,71 @@ git push origin main</pre>
         baseCanPx = sCtx.getImageData(0, 0, N, N).data;
       }
 
+      // 1. Continuous organic vegetation canopy height (CHM) from optical Excess Greenness (ExG) + DSM-DTM residual
       for (let y = 0; y < N; y++) {
         for (let x = 0; x < N; x++) {
           const i = y * N + x;
-          let surfOffset = canopyArtifact[i] * 0.9;
-          // Detect green vegetation pixels from optical basemap (ExG index = 2G - R - B)
+          let chmH = 0.0;
           if (baseCanPx) {
             const p = i * 4;
             const r = baseCanPx[p], g = baseCanPx[p + 1], b = baseCanPx[p + 2];
             const exg = (2 * g - r - b) / 255.0;
-            if (exg > 0.08 && g > 55) {
-              const treeH = Math.min(18.0, 5.0 + exg * 28.0);
-              surfOffset = Math.max(surfOffset, treeH);
-              if ((x % 11 === 0) && (y % 11 === 0) && treesList.length < 180) {
-                treesList.push({ nx: x / (N - 1), ny: y / (N - 1), heightM: treeH });
-              }
+            const ndviProxy = (g - r) / Math.max(1, g + r);
+            if (exg > 0.06 && g > 42 && ndviProxy > 0.04) {
+              chmH = Math.min(18.0, 3.5 + exg * 32.0 + ndviProxy * 12.0);
             }
-          } else if (canopyArtifact[i] > 4.0 && (x % 14 === 0) && (y % 14 === 0) && treesList.length < 120) {
-            treesList.push({ nx: x / (N - 1), ny: y / (N - 1), heightM: canopyArtifact[i] });
+          } else {
+            chmH = canopyArtifact[i] * 0.85;
           }
-          mds2m[i] = dtm2m[i] + surfOffset;
+          ndsm2m[i] = chmH;
         }
       }
-      // Stamp loaded 3D OSM buildings onto MDS 2m surface
+
+      // Smooth canopy surface organically (2-pass Gaussian) so tree canopies form realistic continuous mounds, never artificial spikes
+      const chmTmp = new Float32Array(N * N);
+      for (let pass = 0; pass < 2; pass++) {
+        for (let y = 1; y < N - 1; y++) {
+          for (let x = 1; x < N - 1; x++) {
+            const i = y * N + x;
+            chmTmp[i] = (
+              ndsm2m[i] * 4 +
+              ndsm2m[i - 1] + ndsm2m[i + 1] + ndsm2m[i - N] + ndsm2m[i + N]
+            ) / 8.0;
+          }
+        }
+        ndsm2m.set(chmTmp);
+      }
+
+      // 2. Rasterize real OSM building footprints onto nDSM (sharp crisp rooftops!)
       for (const b of state.osmBuildings3D || []) {
-        const bx = Math.min(N - 2, Math.max(1, Math.round(b.nx * (N - 1))));
-        const by = Math.min(N - 2, Math.max(1, Math.round(b.ny * (N - 1))));
-        for (let dy = -1; dy <= 1; dy++) {
-          for (let dx = -1; dx <= 1; dx++) {
-            const idx = (by + dy) * N + (bx + dx);
-            mds2m[idx] = Math.max(mds2m[idx], dtm2m[idx] + b.heightM);
+        if (b.polyNorm && b.polyNorm.length >= 3) {
+          let minBx = N, maxBx = 0, minBy = N, maxBy = 0;
+          for (const [px, py] of b.polyNorm) {
+            const gx = Math.min(N - 1, Math.max(0, Math.round(px * (N - 1))));
+            const gy = Math.min(N - 1, Math.max(0, Math.round(py * (N - 1))));
+            if (gx < minBx) minBx = gx;
+            if (gx > maxBx) maxBx = gx;
+            if (gy < minBy) minBy = gy;
+            if (gy > maxBy) maxBy = gy;
+          }
+          for (let gy = minBy; gy <= maxBy; gy++) {
+            for (let gx = minBx; gx <= maxBx; gx++) {
+              ndsm2m[gy * N + gx] = Math.max(ndsm2m[gy * N + gx], b.heightM);
+            }
           }
         }
       }
-      state.trees3DPositions = treesList;
+
+      for (let i = 0; i < N * N; i++) {
+        mds2m[i] = dtm2m[i] + ndsm2m[i];
+      }
+      state.trees3DPositions = [];
 
       state.grids = {
         dsm30m,
         dtm2m,
         mds2m,
+        ndsm2m,
         slope2mDeg,
         slope2mPct,
         slope30mDeg,
@@ -3066,7 +3121,7 @@ git push origin main</pre>
       document.getElementById('mapHeaderTitle').textContent = 'AOI Selecionada — Clique em "Executar Super-Resolução" no Passo 2';
       document.getElementById('uploadedFileName').textContent =
         `AOI Pronta (${bounds[0][0].toFixed(3)}, ${bounds[0][1].toFixed(3)})`;
-      document.getElementById('btnRunSR').classList.add('ring-2', 'ring-amber-300', 'animate-pulse');
+      document.getElementById('btnRunDEM').classList.add('ring-2', 'ring-amber-300', 'animate-pulse');
       renderMapOverlays();
       appendLog(`AOI (${state.drawShape.toUpperCase()}) definida no mapa. Clique em "Executar Super-Resolução (30m -> 2m)" no Passo 2.`, 'info');
       showToast('Área selecionada! Agora clique em "Executar Super-Resolução" no Passo 2.');
@@ -3527,7 +3582,8 @@ git push origin main</pre>
           const vIdx = vy * M + vx;
           const gIdx = gy * N + gx;
 
-          const zElev = state.renderLayer === 'mds2m' && state.grids.mds2m ? state.grids.mds2m[gIdx] : state.grids.dtm2m[gIdx];
+          const useMdsSurface = (state.renderLayer === 'mds2m' || state.show3DTrees) && state.grids.mds2m;
+          const zElev = useMdsSurface ? state.grids.mds2m[gIdx] : state.grids.dtm2m[gIdx];
           const normH = (zElev - minZ) / zSpan;
           const yPos = normH * 14.0 * state.exaggeration3D - 4.0;
           posAttr.setY(vIdx, yPos);
@@ -3627,59 +3683,51 @@ git push origin main</pre>
       );
       threeScene.add(window._threeSunMesh);
 
-      // 3D Buildings (OSM/MDS) Extrusion on top of the 2m terrain
+      // Real 3D Architectural Building Footprints Extrusion (THREE.ExtrudeGeometry from OSM Polygons)
       if (window._threeBuildingsGroup) {
         threeScene.remove(window._threeBuildingsGroup);
         window._threeBuildingsGroup = null;
       }
+      if (window._threeTreesGroup) {
+        threeScene.remove(window._threeTreesGroup);
+        window._threeTreesGroup = null;
+      }
+
       if (state.show3DBuildings && state.osmBuildings3D && state.osmBuildings3D.length > 0) {
         window._threeBuildingsGroup = new THREE.Group();
-        const bMat = new THREE.MeshLambertMaterial({ color: 0xe2e8f0, transparent: true, opacity: 0.88 });
+        const wallMat = new THREE.MeshLambertMaterial({ color: 0xe2e8f0 });
+        const roofMat = new THREE.MeshLambertMaterial({ color: 0xcbd5e1 });
+
         for (const b of state.osmBuildings3D) {
           const gx = Math.min(N - 1, Math.max(0, Math.round(b.nx * (N - 1))));
           const gy = Math.min(N - 1, Math.max(0, Math.round(b.ny * (N - 1))));
           const zElev = state.grids.dtm2m[gy * N + gx];
           const normH = (zElev - minZ) / zSpan;
           const groundY = normH * 14.0 * state.exaggeration3D - 4.0;
-          const hUnits = Math.max(1.2, (b.heightM / zSpan) * 14.0 * state.exaggeration3D);
+          const hUnits = Math.max(1.0, (b.heightM / zSpan) * 14.0 * state.exaggeration3D);
 
-          const bGeom = new THREE.BoxGeometry(b.wUnits, hUnits, b.dUnits);
-          const bMesh = new THREE.Mesh(bGeom, bMat);
-          bMesh.position.set((b.nx - 0.5) * blockSize, groundY + hUnits / 2.0, (b.ny - 0.5) * blockSize);
-          window._threeBuildingsGroup.add(bMesh);
+          if (b.polyNorm && b.polyNorm.length >= 3) {
+            const shape = new THREE.Shape();
+            b.polyNorm.forEach(([px, py], idx) => {
+              const sx = (px - 0.5) * blockSize;
+              const sy = -(py - 0.5) * blockSize;
+              if (idx === 0) shape.moveTo(sx, sy);
+              else shape.lineTo(sx, sy);
+            });
+            shape.closePath();
+            const extrudeGeom = new THREE.ExtrudeGeometry(shape, { depth: hUnits, bevelEnabled: false });
+            extrudeGeom.rotateX(-Math.PI / 2);
+            const mesh = new THREE.Mesh(extrudeGeom, [roofMat, wallMat]);
+            mesh.position.y = groundY;
+            window._threeBuildingsGroup.add(mesh);
+          } else {
+            const bGeom = new THREE.BoxGeometry(1.8, hUnits, 1.8);
+            const mesh = new THREE.Mesh(bGeom, wallMat);
+            mesh.position.set((b.nx - 0.5) * blockSize, groundY + hUnits / 2.0, (b.ny - 0.5) * blockSize);
+            window._threeBuildingsGroup.add(mesh);
+          }
         }
         threeScene.add(window._threeBuildingsGroup);
-      }
-
-      // 3D Trees (Vegetation Canopy Cones + Trunks) on top of the 2m terrain
-      if (window._threeTreesGroup) {
-        threeScene.remove(window._threeTreesGroup);
-        window._threeTreesGroup = null;
-      }
-      if (state.show3DTrees && state.trees3DPositions && state.trees3DPositions.length > 0) {
-        window._threeTreesGroup = new THREE.Group();
-        const trunkMat = new THREE.MeshLambertMaterial({ color: 0x78350f });
-        const leafMat = new THREE.MeshLambertMaterial({ color: 0x15803d });
-        for (const tr of state.trees3DPositions) {
-          const gx = Math.min(N - 1, Math.max(0, Math.round(tr.nx * (N - 1))));
-          const gy = Math.min(N - 1, Math.max(0, Math.round(tr.ny * (N - 1))));
-          const zElev = state.grids.dtm2m[gy * N + gx];
-          const normH = (zElev - minZ) / zSpan;
-          const groundY = normH * 14.0 * state.exaggeration3D - 4.0;
-          const treeH = Math.max(2.2, (tr.heightM / zSpan) * 14.0 * state.exaggeration3D);
-
-          const xPos = (tr.nx - 0.5) * blockSize;
-          const zPos = (tr.ny - 0.5) * blockSize;
-
-          const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, treeH * 0.4, 5), trunkMat);
-          trunk.position.set(xPos, groundY + treeH * 0.2, zPos);
-          window._threeTreesGroup.add(trunk);
-
-          const crown = new THREE.Mesh(new THREE.ConeGeometry(1.4, treeH * 0.85, 6), leafMat);
-          crown.position.set(xPos, groundY + treeH * 0.72, zPos);
-          window._threeTreesGroup.add(crown);
-        }
-        threeScene.add(window._threeTreesGroup);
       }
 
       updateCamera3D();
@@ -5191,7 +5239,7 @@ git push origin main</pre>
       }
       document.getElementById('statusDot').className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse';
       document.getElementById('mapHeaderTitle').textContent = `AOI: ${aoi.name} — Clique em "Executar Super-Resolução"`;
-      document.getElementById('btnRunSR').classList.add('ring-2', 'ring-amber-300', 'animate-pulse');
+      document.getElementById('btnRunDEM').classList.add('ring-2', 'ring-amber-300', 'animate-pulse');
       renderMapOverlays();
       appendLog(`Área exemplo '${aoi.name}' selecionada. Clique em "Executar Super-Resolução (30m -> 2m)" no Passo 2.`, 'info');
     }
@@ -5390,13 +5438,44 @@ git push origin main</pre>
       });
 
       // Layer, Palette & SR Controls
-      document.getElementById('btnRunSR').addEventListener('click', () => {
-        document.getElementById('btnRunSR').classList.remove('ring-2', 'ring-amber-300', 'animate-pulse');
+      const runSeparateDEM = async () => {
+        document.getElementById('btnRunDEM').classList.remove('ring-2', 'ring-amber-300', 'animate-pulse');
         state.hasProcessed = true;
+        state.renderLayer = 'dtm2m';
+        state.show3DTrees = false;
+        state.show3DBuildings = false;
+        document.getElementById('selectRenderLayer').value = 'dtm2m';
+        document.getElementById('chk3DTrees').checked = false;
+        document.getElementById('chk3DBuildings').checked = false;
+        document.getElementById('btnRunDEM').className = 'py-2.5 px-3 rounded-lg font-bold bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-950 shadow-lg flex items-center justify-center gap-1.5 transition';
+        document.getElementById('btnRunMDS').className = 'py-2.5 px-3 rounded-lg font-bold bg-slate-800 hover:bg-amber-500/25 text-amber-300 border border-amber-500/50 flex items-center justify-center gap-1.5 transition';
         document.getElementById('statusDot').className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
-        fetchRealCloudTilesAndRunSR();
-        showToast('Ingerindo dados da nuvem e gerando MDT 2m!');
-      });
+        appendLog('=== MODO MDT 2m (SOLO NU / BARE-EARTH) ACIONADO ===', 'info');
+        await fetchRealCloudTilesAndRunSR();
+        showToast('MDT 2m (Solo Nu) gerado sem interferência de prédios!');
+      };
+
+      const runSeparateMDS = async () => {
+        document.getElementById('btnRunDEM').classList.remove('ring-2', 'ring-amber-300', 'animate-pulse');
+        state.hasProcessed = true;
+        state.renderLayer = 'mds2m';
+        state.show3DTrees = true;
+        state.show3DBuildings = true;
+        document.getElementById('selectRenderLayer').value = 'mds2m';
+        document.getElementById('chk3DTrees').checked = true;
+        document.getElementById('chk3DBuildings').checked = true;
+        document.getElementById('btnRunMDS').className = 'py-2.5 px-3 rounded-lg font-bold bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-lg flex items-center justify-center gap-1.5 transition';
+        document.getElementById('btnRunDEM').className = 'py-2.5 px-3 rounded-lg font-bold bg-slate-800 hover:bg-sky-500/25 text-sky-300 border border-sky-500/50 flex items-center justify-center gap-1.5 transition';
+        document.getElementById('statusDot').className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse';
+        appendLog('=== MODO MDS 2m (SUPERFÍCIE: COPAS CONTÍNUAS + PRÉDIOS OSM) ACIONADO ===', 'info');
+        await fetchRealOSMBuildingPolygons();
+        await fetchRealCloudTilesAndRunSR();
+        showToast('MDS 2m gerado (Copas Contínuas + Polígonos Reais de Prédios OSM)!');
+      };
+
+      document.getElementById('btnRunDEM').addEventListener('click', runSeparateDEM);
+      document.getElementById('btnRunMDS').addEventListener('click', runSeparateMDS);
+      document.getElementById('btnRunSR').addEventListener('click', runSeparateDEM);
 
       document.getElementById('btnMeasureDist').addEventListener('click', () => startMeasureMode('measure_dist'));
       document.getElementById('btnMeasureArea').addEventListener('click', () => startMeasureMode('measure_area'));
@@ -5460,43 +5539,50 @@ git push origin main</pre>
       });
       document.getElementById('btnExport3DPNG').addEventListener('click', exportScreenPNGWithLegend);
 
-      // 3D Buildings (OSM Overpass with urban fallback) & GeoJSON export
+      // Real 3D Building Polygon Footprints from OpenStreetMap (Overpass API `out body geom`)
+      const fetchRealOSMBuildingPolygons = async () => {
+        const [[sLat, wLon], [nLat, eLon]] = getActiveBounds();
+        appendLog('Consultando polígonos reais de edificações (footprints + height/levels) no OpenStreetMap...', 'info');
+        try {
+          const q = `[out:json][timeout:12];way["building"](${sLat},${wLon},${nLat},${eLon});out body geom 180;`;
+          const resp = await fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q));
+          const json = await resp.json();
+          const blds = [];
+          for (const el of (json.elements || []).slice(0, 180)) {
+            if (!el.geometry || el.geometry.length < 3) continue;
+            let sumX = 0, sumY = 0;
+            const polyNorm = el.geometry.map((pt) => {
+              const nx = (pt.lon - wLon) / Math.max(1e-7, eLon - wLon);
+              const ny = 1.0 - (pt.lat - sLat) / Math.max(1e-7, nLat - sLat);
+              sumX += nx;
+              sumY += ny;
+              return [nx, ny];
+            });
+            const nx = sumX / polyNorm.length;
+            const ny = sumY / polyNorm.length;
+            const lvls = parseFloat(el.tags && el.tags['building:levels']) || 2;
+            const hM = parseFloat(el.tags && el.tags['height']) || lvls * 3.2;
+            blds.push({
+              nx,
+              ny,
+              polyNorm,
+              heightM: hM,
+              name: (el.tags && el.tags.name) || 'Edificação OSM'
+            });
+          }
+          state.osmBuildings3D = blds;
+          appendLog(`${blds.length} polígonos reais de edificações carregados do OpenStreetMap!`, 'ok');
+        } catch (err) {
+          state.osmBuildings3D = [];
+          appendLog(`Overpass indisponível no momento (${err.message}). MDS usando superfície contínua de dossel.`, 'warn');
+        }
+      };
+
       const loadAndToggle3DBuildings = async (enabled) => {
         state.show3DBuildings = enabled;
         if (enabled && state.osmBuildings3D.length === 0) {
-          const [[sLat, wLon], [nLat, eLon]] = getActiveBounds();
-          appendLog('Buscando edificações 3D (height / levels) no OpenStreetMap...', 'info');
-          try {
-            const q = `[out:json][timeout:10];way["building"](${sLat},${wLon},${nLat},${eLon});out center 120;`;
-            const resp = await fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q));
-            const json = await resp.json();
-            const blds = [];
-            for (const el of (json.elements || []).slice(0, 120)) {
-              if (!el.center) continue;
-              const nx = (el.center.lon - wLon) / (eLon - wLon);
-              const ny = 1.0 - (el.center.lat - sLat) / (nLat - sLat);
-              const lvls = parseFloat(el.tags && el.tags['building:levels']) || 2;
-              const hM = parseFloat(el.tags && el.tags['height']) || lvls * 3.2;
-              blds.push({ nx, ny, heightM: hM, wUnits: 2.2, dUnits: 2.2, name: (el.tags && el.tags.name) || 'Edificação OSM' });
-            }
-            state.osmBuildings3D = blds;
-            appendLog(`${blds.length} edificações 3D carregadas do OpenStreetMap!`, 'ok');
-          } catch (err) {
-            // Deterministic urban blocks fallback
-            const blds = [];
-            for (let k = 0; k < 28; k++) {
-              blds.push({
-                nx: 0.15 + ((k * 37) % 70) / 100.0,
-                ny: 0.15 + ((k * 53) % 70) / 100.0,
-                heightM: 6.0 + (k % 5) * 4.5,
-                wUnits: 2.4,
-                dUnits: 2.4,
-                name: `Edificação #${k + 1}`
-              });
-            }
-            state.osmBuildings3D = blds;
-            appendLog(`Edificações 3D urbanas geradas (${blds.length} blocos).`, 'info');
-          }
+          await fetchRealOSMBuildingPolygons();
+          if (state.hasProcessed) computeSuperResolutionPipeline();
         }
         initOrUpdateThree3D();
       };
