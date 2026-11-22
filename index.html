@@ -3912,9 +3912,14 @@ git push origin main</pre>
               if (px < xMin) xMin = px; if (px > xMax) xMax = px;
               if (py < yMin) yMin = py; if (py > yMax) yMax = py;
             }
-            const stepG = 0.022;
-            let localSeed = vIdx * 17 + 3;
-            for (let py = yMin + stepG * 0.4; py <= yMax; py += stepG) {
+            const spanPoly = Math.max(xMax - xMin, yMax - yMin);
+            if (spanPoly < 0.025) {
+              // Small canopy patch: place natural tree cluster directly at patch center!
+              list.push({ nx: v.nx, ny: v.ny, h: v.heightM, seed: vIdx * 17 + 3 });
+            } else {
+              const stepG = 0.022;
+              let localSeed = vIdx * 17 + 3;
+              for (let py = yMin + stepG * 0.4; py <= yMax; py += stepG) {
               for (let px = xMin + stepG * 0.4; px <= xMax; px += stepG) {
                 localSeed++;
                 const jx = px + (((localSeed * 19) % 100) / 100.0 - 0.5) * stepG * 0.75;
@@ -3922,6 +3927,7 @@ git push origin main</pre>
                 if (jx > 0.01 && jx < 0.99 && jy > 0.01 && jy < 0.99 && pointInPoly(jx, jy, v.polyNorm)) {
                   list.push({ nx: jx, ny: jy, h: v.heightM, seed: localSeed });
                 }
+              }
               }
             }
           } else if (v.nx > 0.01 && v.nx < 0.99 && v.ny > 0.01 && v.ny < 0.99) {
@@ -3985,7 +3991,7 @@ git push origin main</pre>
 
             // Realistic canopy scale proportional to residential houses (low, organic, seated flush on terrain)
             const jitter = 0.72 + ((tr.seed * 37) % 55) / 100.0;
-            const hScale = Math.max(0.45, Math.min(1.65, (tr.h / Math.max(35, zSpan)) * 9.0 * Math.max(0.9, state.exaggeration3D))) * jitter;
+            const hScale = Math.max(0.65, Math.min(2.1, (tr.h / Math.max(32, zSpan)) * 11.5 * Math.max(1.0, state.exaggeration3D))) * jitter;
             const rScale = Math.max(0.42, hScale * 0.95);
             const xW = (tr.nx - 0.5) * blockSize;
             const zW = (tr.ny - 0.5) * blockSize;
@@ -5979,9 +5985,9 @@ git push origin main</pre>
           }
         }
 
-        // 2. Calibrated Optical Satellite Canopy Extractor (Cerrado/Tropical/Urban green trees, excludes water & bright roofs)
+        // 2. Full-AOI Calibrated Optical Satellite Canopy Extractor (scans 100% North->South with ZERO top-half cutoff!)
         if (vegList.length < 20 && state.realBasemapCanvas) {
-          const G = 64;
+          const G = 84;
           const sc = document.createElement('canvas');
           sc.width = G;
           sc.height = G;
@@ -5989,36 +5995,43 @@ git push origin main</pre>
           sctx.drawImage(state.realBasemapCanvas, 0, 0, G, G);
           const px = sctx.getImageData(0, 0, G, G).data;
 
+          const allCandidates = [];
           for (let y = 1; y < G - 1; y++) {
             for (let x = 1; x < G - 1; x++) {
               const p = (y * G + x) * 4;
               const r = px[p], g = px[p + 1], b = px[p + 2];
               const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-              // Detect real dark/olive-green tree canopies while excluding dark blue water (b >= g - 3) & bright roofs (lum > 140)
-              const isGreenCanopy = (g > r + 2) && (g > b + 6) && (g >= 28) && (g <= 145) && (lum <= 135);
+              // Detect real dark/olive-green tree canopies across the ENTIRE AOI (excluding water & bright roofs)
+              const isGreenCanopy = (g > r + 1) && (g > b + 5) && (g >= 24) && (g <= 152) && (lum <= 140);
               if (isGreenCanopy) {
                 const nx = x / (G - 1);
                 const ny = y / (G - 1);
-                const rad = 0.011;
-                const polyNorm = [];
-                for (let k = 0; k < 6; k++) {
-                  const a = (k / 6) * Math.PI * 2;
-                  polyNorm.push([nx + rad * Math.cos(a), ny + rad * Math.sin(a)]);
-                }
                 const exg = (2 * g - r - b) / 255.0;
-                const estH = Math.min(15.0, 6.0 + Math.max(0, exg) * 35.0);
-                vegList.push({
-                  nx,
-                  ny,
-                  polyNorm,
-                  heightM: estH,
-                  vegClass: 'canopy_optical',
-                  name: 'Maciço Arbóreo (Satélite)'
-                });
-                if (vegList.length >= 650) break;
+                const estH = Math.min(16.0, 6.5 + Math.max(0, exg) * 38.0);
+                allCandidates.push({ nx, ny, estH });
               }
             }
-            if (vegList.length >= 650) break;
+          }
+
+          // Uniformly stride-sample across ALL candidates so North, Center, and South (Asa Sul + Lago Sul) get 100% even coverage!
+          const maxVegFeatures = 2400;
+          const stride = allCandidates.length > maxVegFeatures ? allCandidates.length / maxVegFeatures : 1.0;
+          for (let idxF = 0; idxF < allCandidates.length && vegList.length < maxVegFeatures; idxF += stride) {
+            const c = allCandidates[Math.floor(idxF)];
+            const rad = 0.0085;
+            const polyNorm = [];
+            for (let k = 0; k < 6; k++) {
+              const a = (k / 6) * Math.PI * 2;
+              polyNorm.push([c.nx + rad * Math.cos(a), c.ny + rad * Math.sin(a)]);
+            }
+            vegList.push({
+              nx: c.nx,
+              ny: c.ny,
+              polyNorm,
+              heightM: c.estH,
+              vegClass: 'canopy_optical',
+              name: 'Maciço Arbóreo (Satélite)'
+            });
           }
         }
 
